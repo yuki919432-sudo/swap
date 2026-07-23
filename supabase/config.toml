@@ -16,7 +16,9 @@ max_rows = 1000
 [db]
 port = 54322
 shadow_port = 54320
-major_version = 16
+# The Supabase CLI's local stack uses Postgres 17. Our migrations are
+# version-agnostic (no 16/17-specific SQL); the pgTAP suite runs on 16 in ci.yml.
+major_version = 17
 
 [auth]
 enabled = true
