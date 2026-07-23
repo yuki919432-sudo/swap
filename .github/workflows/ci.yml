@@ -1,0 +1,85 @@
+name: CI
+
+# Authoritative verification. This workflow starts from a CLEAN database, applies
+# every migration in order, and fails if any of the following fail:
+#   - migrations on a clean DB        - pgTAP suite (incl. tenant isolation)
+#   - storage-policy tests            - multi-connection concurrency tests
+#   - TypeScript typecheck            - ESLint
+#   - TS <-> DB enum parity           - schema drift across a reset
+#
+# Any change to RLS/migrations/tests runs the full security suite here; a red
+# suite blocks the PR.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      # Node scripts (concurrency + enum parity) connect over the local socket.
+      PGUSER: runner
+      PGHOST: /var/run/postgresql
+      SWAP_ADMIN_DB: postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node >= 22.6 is required for --experimental-strip-types (enum parity).
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install PostgreSQL 16 + pgTAP + pg_prove
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-16 postgresql-16-pgtap libtap-parser-sourcehandler-pgtap-perl
+          sudo pg_ctlcluster 16 main start || sudo pg_ctlcluster 16 main restart
+          # A superuser role matching the CI OS user, so the scripts' peer-auth
+          # psql/socket connections work without passwords.
+          sudo -u postgres psql -c "create role runner superuser login createdb;"
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Clean migrate + pgTAP suite (tenant isolation, privilege, invitations)
+        run: pnpm db:test
+
+      - name: Seed loads + TypeScript<->DB enum parity
+        run: |
+          pnpm db:reset
+          SWAP_ENUM_DB=swap_dev pnpm check:enum-parity
+
+      - name: Schema repeatability / drift check
+        run: |
+          # Strip pg_dump's per-run random \restrict/\unrestrict nonce (not schema).
+          dump() { pg_dump --schema-only --no-owner --no-privileges -d swap_dev | grep -vE '^\\(un)?restrict '; }
+          dump > /tmp/schema1.sql
+          pnpm db:reset >/dev/null
+          dump > /tmp/schema2.sql
+          if ! diff -u /tmp/schema1.sql /tmp/schema2.sql; then
+            echo "::error::Schema drift detected between two clean applies"; exit 1
+          fi
+
+      - name: Storage-policy tests
+        run: pnpm db:test:storage
+
+      - name: Multi-connection concurrency tests
+        run: pnpm db:test:concurrency

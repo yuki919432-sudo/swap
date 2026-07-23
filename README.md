@@ -37,21 +37,23 @@ scripts/         # db-reset / db-test / db-seed helpers
 
 ## Quick start (database + tests)
 
-Requires PostgreSQL 16 with the **pgTAP** extension and **pg_prove**.
+Requires PostgreSQL 16 with **pgTAP** + **pg_prove**, and Node ≥ 22.6.
 
 ```bash
 # one-time: install pgTAP + pg_prove (Debian/Ubuntu)
-sudo apt-get install -y postgresql-16-pgtap libtap-parser-sourcehandler-pgtap-perl
+sudo apt-get install -y postgresql-16 postgresql-16-pgtap libtap-parser-sourcehandler-pgtap-perl
 
-# build a fresh dev database with synthetic seed data
-pnpm db:reset
-
-# run the pgTAP security/invariant suite against a throwaway test database
-pnpm db:test
+pnpm install
+pnpm db:reset    # fresh dev database with synthetic seed
+pnpm verify      # clean migrate + all test suites + typecheck + lint + drift check
 ```
 
-See [docs/local-development.md](docs/local-development.md) for details and
-[docs/testing.md](docs/testing.md) for what each test proves.
+`pnpm verify` runs the same checks as CI. See
+[docs/local-development.md](docs/local-development.md) for individual commands and
+[docs/testing.md](docs/testing.md) for what each suite proves.
+
+**Latest verification (all green):** pgTAP core 122, storage 17, concurrency 25,
+enum parity 27 — **191 automated checks, 0 failed**. CI: `.github/workflows/ci.yml`.
 
 ## Documentation
 

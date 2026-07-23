@@ -61,6 +61,9 @@ begin
   perform app.write_audit('platform', null, 'user_anonymized', 'user', p_user, '{}'::jsonb);
 end;
 $$;
+-- Postgres grants EXECUTE to PUBLIC by default; revoke it so only trusted server
+-- code (service_role) can run maintenance functions.
+revoke execute on function app.anonymize_user(uuid) from public;
 grant execute on function app.anonymize_user(uuid) to service_role;
 
 -- Expire stale content. Safe to run frequently; each statement is idempotent.
@@ -92,6 +95,7 @@ begin
    where status = 'pending' and created_at < now() - p_request_ttl;
 end;
 $$;
+revoke execute on function app.expire_stale_content(interval, interval) from public;
 grant execute on function app.expire_stale_content(interval, interval) to service_role;
 
 -- Purge ephemeral data past its retention window.
@@ -115,4 +119,5 @@ begin
   delete from events where status = 'draft' and updated_at < now() - p_draft_ttl;
 end;
 $$;
+revoke execute on function app.purge_expired_ephemeral(interval, interval, interval) from public;
 grant execute on function app.purge_expired_ephemeral(interval, interval, interval) to service_role;

@@ -34,10 +34,15 @@ begin
 
   -- ---- listing-images: read = verified member of the school in path[1];
   --      write = owner of the listing in path[2].
+  -- Read = verified member OR school staff (for moderation) OR platform admin,
+  -- mirroring the table-level content-read rule. Staff need read access so they
+  -- can moderate/remove objects (a DELETE must be able to see the row).
   execute $p$
     create policy listing_images_read on storage.objects for select to authenticated
     using (bucket_id = 'listing-images'
-           and app.is_verified_member(((storage.foldername(name))[1])::uuid));
+           and (app.is_verified_member(((storage.foldername(name))[1])::uuid)
+                or app.is_school_staff(((storage.foldername(name))[1])::uuid)
+                or app.is_platform_admin()));
   $p$;
   execute $p$
     create policy listing_images_write on storage.objects for insert to authenticated
@@ -60,7 +65,9 @@ begin
   execute $p$
     create policy event_covers_read on storage.objects for select to authenticated
     using (bucket_id = 'event-covers'
-           and app.is_verified_member(((storage.foldername(name))[1])::uuid));
+           and (app.is_verified_member(((storage.foldername(name))[1])::uuid)
+                or app.is_school_staff(((storage.foldername(name))[1])::uuid)
+                or app.is_platform_admin()));
   $p$;
   execute $p$
     create policy event_covers_write on storage.objects for insert to authenticated
@@ -88,7 +95,9 @@ begin
   execute $p$
     create policy message_attachments_read on storage.objects for select to authenticated
     using (bucket_id = 'message-attachments'
-           and app.is_conversation_member(((storage.foldername(name))[2])::uuid));
+           and (app.is_conversation_member(((storage.foldername(name))[2])::uuid)
+                or app.is_school_staff(((storage.foldername(name))[1])::uuid)
+                or app.is_platform_admin()));
   $p$;
   execute $p$
     create policy message_attachments_write on storage.objects for insert to authenticated

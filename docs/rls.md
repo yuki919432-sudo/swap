@@ -89,7 +89,19 @@ writes then occur only through SECURITY DEFINER functions):
 Storage object policies mirror the same predicates using the first path segment
 as the tenant key. See [storage.md](storage.md).
 
+## Hardening notes
+
+- Every SECURITY DEFINER function in `app` pins a `search_path` starting with
+  `app` (verified by `05_definer_search_path.sql`), preventing search-path
+  hijacking of the definer's elevated execution.
+- Maintenance functions (`anonymize_user`, `expire_stale_content`,
+  `purge_expired_ephemeral`) have `EXECUTE` revoked from `PUBLIC` and granted only
+  to `service_role`, so application users cannot invoke them.
+- Storage read policies include school staff / platform admin (not only verified
+  members) so moderation deletes can see the target object; see [storage.md](storage.md).
+
 ## Testing
 
-Every isolation and privilege guarantee has an automated pgTAP proof; see
-[testing.md](testing.md). RLS changes must ship with a corresponding test.
+Every isolation and privilege guarantee has an automated pgTAP proof, plus
+multi-connection concurrency proofs; see [testing.md](testing.md). CI runs the
+full suite on every change, so RLS changes cannot merge without it.

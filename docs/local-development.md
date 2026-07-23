@@ -20,15 +20,29 @@ Postgres so the security tests are fully runnable without the full Supabase stac
 pnpm install
 ```
 
-## Database commands
+## Database & verification commands
 
 ```bash
-pnpm db:reset   # recreate swap_dev, apply schema, load synthetic seed
-pnpm db:seed    # (re)load synthetic seed into swap_dev
-pnpm db:test    # recreate swap_test, apply schema, run the pgTAP suite
+pnpm db:start             # ensure a local PostgreSQL is running (convenience)
+pnpm db:reset             # recreate swap_dev, apply schema, load synthetic seed
+pnpm db:seed              # (re)load synthetic seed into swap_dev
+pnpm db:test              # recreate swap_test, apply schema, run the pgTAP suite
+pnpm db:test:storage      # storage-policy tests (local storage-schema replica)
+pnpm db:test:concurrency  # multi-connection concurrency tests (node-postgres)
+pnpm check:enum-parity    # TS <-> DB enum parity (needs Node >= 22.6)
+pnpm verify               # everything above + typecheck + lint + drift check
 ```
 
-Override database names via env (`SWAP_DEV_DB`, `SWAP_TEST_DB`, `SWAP_ADMIN_DB`).
+Override database names via env (`SWAP_DEV_DB`, `SWAP_TEST_DB`, `SWAP_ADMIN_DB`,
+`SWAP_STORAGE_DB`, `SWAP_CONCURRENCY_DB`). See [testing.md](testing.md) for what
+each proves.
+
+### Optional session hook (opt-in, off by default)
+
+`scripts/optional/session-start-hook.sh` is a documented convenience that resets
+the local dev DB. It is **not** wired into any settings file and does nothing
+unless you set `SWAP_ENABLE_SESSION_HOOK=1`; it refuses any non-dev/test or
+non-local database. CI and the explicit `pnpm` scripts remain authoritative.
 
 ## What the scripts do
 

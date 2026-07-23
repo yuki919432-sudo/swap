@@ -14,6 +14,10 @@ export default tseslint.config(
       "**/.next/**",
       "**/node_modules/**",
       "**/*.generated.ts",
+      // Operational glue (node/bash scripts, SQL test harness) is exercised by
+      // the DB test suites and CI directly, not by the TS linter.
+      "scripts/**",
+      "supabase/**",
     ],
   },
   js.configs.recommended,

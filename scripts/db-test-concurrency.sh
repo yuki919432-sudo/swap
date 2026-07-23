@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Recreate the local development database, apply schema, and load synthetic seed.
+# Provision a throwaway DB with the full schema, then run the multi-connection
+# concurrency suite (node-postgres, real separate connections).
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DB="${SWAP_DEV_DB:-swap_dev}"
+DB="${SWAP_CONCURRENCY_DB:-swap_concurrency}"
 ADMIN_DB="${SWAP_ADMIN_DB:-postgres}"
 
 echo "==> (re)creating database $DB"
@@ -12,6 +13,5 @@ psql -v ON_ERROR_STOP=1 -q -d "$ADMIN_DB" -c "create database $DB;"
 
 bash "$ROOT_DIR/scripts/apply-schema.sh" "$DB"
 
-echo "==> seeding synthetic development data"
-psql -v ON_ERROR_STOP=1 -q -d "$DB" -f "$ROOT_DIR/supabase/seed/seed.sql"
-echo "==> dev database ready: $DB"
+echo "==> running concurrency suite"
+SWAP_CONCURRENCY_DB="$DB" node "$ROOT_DIR/supabase/tests/concurrency/run.mjs"

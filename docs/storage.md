@@ -16,12 +16,46 @@ skipped on bare local Postgres (no `storage` schema).
 
 ## Policy model
 
-- Read requires `app.is_verified_member(path[1])` (or conversation membership for
-  attachments); avatars are readable by any authenticated user (display).
+- Read requires `app.is_verified_member(path[1])` **or** `app.is_school_staff(path[1])`
+  **or** `app.is_platform_admin()` (staff/platform need read access so they can
+  moderate — a DELETE must be able to see the row). Message attachments read for
+  conversation members (plus staff/platform). Avatars are readable by any
+  authenticated user (display).
 - Write additionally checks ownership: listing owner (`path[2]` = listing_id),
   event organizer, self (avatar), or conversation membership.
+- Delete: listing owner or school staff (moderation); avatar owner.
+- Invalid paths cannot bypass isolation: an empty/short path yields a NULL tenant
+  key (denied), and a non-UUID segment raises a cast error (denied) — proven in
+  the storage test.
 - File type and size are enforced by bucket `allowed_mime_types` +
   `file_size_limit`; clients should also compress images before upload.
+
+## Integration testing
+
+Storage policy **logic** is tested automatically against a faithful local replica
+of the Supabase `storage` schema (`supabase/tests/setup/02_storage_stub.sql` +
+`supabase/tests/storage/01_storage_policies.sql`, run by `pnpm db:test:storage`).
+This exercises the real migration-0022 object policies: authorized upload,
+cross-school upload denial, cross-school read denial, owner vs. non-owner delete,
+moderator scope, cross-school moderation denial, suspended-member loss, and
+invalid-path safety.
+
+What the replica does **not** cover — and must be checked against a real,
+disposable, **non-production** Supabase environment before launch:
+
+1. `supabase start` (local Docker) or a dedicated test project — both provide the
+   real `storage` schema and storage API.
+2. Apply migrations (`supabase db push`); migration 0022 creates the buckets and
+   policies.
+3. With a verified School A member's session, upload to
+   `listing-images/<schoolA>/<listingA>/…` (expect success) and to a School B
+   path (expect failure); attempt to download a private School B object (expect
+   failure); verify MIME/size limits reject disallowed/oversized files.
+4. Confirm owner-only delete and moderator moderation as above.
+
+Credentials for a test project belong in environment variables / CI secrets
+(documented in `.env.example`), never committed. Do not run these against a
+production project.
 
 ## Upload flow (later phases)
 

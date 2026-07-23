@@ -5,6 +5,37 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Phase 1A hardening — verification & CI (2026-07-23)
+
+Requested pre-approval hardening pass. No Phase 1B application code.
+
+- **CI** (`.github/workflows/ci.yml`): clean-DB migrations, full pgTAP suite,
+  storage tests, concurrency tests, typecheck, lint, TS↔DB enum parity, and a
+  schema-drift check. Red suite blocks the PR; RLS changes always run the suite.
+- **Concurrency tests** (`supabase/tests/concurrency/run.mjs`, node-postgres,
+  real separate connections): competing acceptances for a shared listing;
+  overlapping multi-listing offers; a deadlock scenario (asserts `40P01`); and a
+  concurrent final invitation use. Expected application-layer errors documented.
+- **Storage integration tests**: a faithful local replica of the Supabase
+  `storage` schema + pgTAP proving upload/read/delete/moderation isolation,
+  suspended-member loss, and invalid-path safety. Real-Supabase process documented.
+- **Privilege-boundary tests** (`25_privilege_boundaries.sql`) and a **search_path
+  meta-test** (`05_definer_search_path.sql`).
+- **Invitation-security tests** (`65_invitation_security.sql`): expiry/revocation,
+  a single generic error across all failure modes, school binding, and no full
+  code in audit metadata.
+- **Repeatability**: `pnpm verify` runs the full flow twice and diffs the schema
+  (no drift). Explicit scripts (`db:start`, `db:test:storage`,
+  `db:test:concurrency`, `check:enum-parity`, `verify`) plus an **optional,
+  opt-in, production-safe** session hook (disabled by default).
+- **Fixes surfaced by the new tests:**
+  - Maintenance functions were `PUBLIC`-executable (Postgres default); `EXECUTE`
+    revoked from `PUBLIC`, granted only to `service_role`.
+  - Storage read policies now include school staff / platform admin so moderators
+    can see (and remove) objects; previously a moderator's delete matched no rows.
+- Verification totals: **191 automated checks** (pgTAP 122, storage 17,
+  concurrency 25, enum parity 27), all passing.
+
 ### Phase 1A — Architecture foundation & security model (2026-07-23)
 
 Initial clean-slate foundation built from the SWAP! V2 specification. No previous
