@@ -48,10 +48,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y postgresql-16 postgresql-16-pgtap libtap-parser-sourcehandler-pgtap-perl
-          sudo pg_ctlcluster 16 main start || sudo pg_ctlcluster 16 main restart
+          sudo pg_ctlcluster 16 main start || sudo pg_ctlcluster 16 main restart || true
+          pg_isready --timeout=30 || (sudo pg_ctlcluster 16 main restart && pg_isready --timeout=30)
           # A superuser role matching the CI OS user, so the scripts' peer-auth
-          # psql/socket connections work without passwords.
-          sudo -u postgres psql -c "create role runner superuser login createdb;"
+          # psql/socket connections work without passwords. Idempotent.
+          sudo -u postgres psql -v ON_ERROR_STOP=1 -c \
+            "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='runner') THEN CREATE ROLE runner SUPERUSER LOGIN CREATEDB; END IF; END \$\$;"
 
       - name: Dangerous-Unicode scan (bidi / zero-width / control chars)
         run: pnpm check:unicode
