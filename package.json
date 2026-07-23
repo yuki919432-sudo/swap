@@ -27,9 +27,12 @@
     "db:test:concurrency": "bash scripts/db-test-concurrency.sh",
     "check:enum-parity": "node --experimental-strip-types scripts/check-enum-parity.mjs",
     "check:unicode": "node scripts/check-unicode.mjs",
+    "db:gen-types": "bash scripts/gen-db-types.sh",
+    "storage:integration": "node supabase/tests/integration/storage.integration.mjs",
     "verify": "bash scripts/verify.sh"
   },
   "devDependencies": {
+    "@supabase/supabase-js": "^2.45.4",
     "@swap/config": "workspace:*",
     "eslint": "^9.13.0",
     "pg": "^8.13.1",

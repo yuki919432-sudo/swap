@@ -1,0 +1,70 @@
+name: Storage Integration
+
+# Real Supabase Storage integration test. Boots a DISPOSABLE local Supabase stack
+# on the GitHub runner (`supabase start`), applies all migrations from a clean
+# state, and runs the Storage authorization test against the real Storage service
+# and storage schema. No production project, no production secrets — the CLI mints
+# throwaway local keys. The fast policy-replica pgTAP tests (in ci.yml) remain the
+# unit-level check; this is the additional integration proof.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+concurrency:
+  group: storage-integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  storage-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start disposable Supabase stack + apply migrations
+        run: |
+          set -euo pipefail
+          # Exclude services this test does not need, to keep startup lean.
+          supabase start -x studio,imgproxy,inbucket,realtime,edge-runtime,logflare,vector
+          # Apply every migration from a clean state.
+          supabase db reset --no-seed
+
+      - name: Run Storage integration test
+        run: |
+          set -euo pipefail
+          supabase status -o json > /tmp/status.json
+          export SUPABASE_URL="$(node -e "process.stdout.write(require('/tmp/status.json').API_URL)")"
+          export SUPABASE_ANON_KEY="$(node -e "process.stdout.write(require('/tmp/status.json').ANON_KEY)")"
+          export SUPABASE_SERVICE_ROLE_KEY="$(node -e "process.stdout.write(require('/tmp/status.json').SERVICE_ROLE_KEY)")"
+          node supabase/tests/integration/storage.integration.mjs
+
+      - name: Dump logs on failure
+        if: failure()
+        run: |
+          supabase status || true
+          docker ps -a || true
+          for c in $(docker ps -aq); do
+            echo "===== logs: $c ====="
+            docker logs "$c" 2>&1 | tail -60 || true
+          done
+
+      - name: Stop Supabase stack
+        if: always()
+        run: supabase stop --no-backup || true

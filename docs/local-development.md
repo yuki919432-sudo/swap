@@ -30,8 +30,22 @@ pnpm db:test              # recreate swap_test, apply schema, run the pgTAP suit
 pnpm db:test:storage      # storage-policy tests (local storage-schema replica)
 pnpm db:test:concurrency  # multi-connection concurrency tests (node-postgres)
 pnpm check:enum-parity    # TS <-> DB enum parity (needs Node >= 22.6)
-pnpm verify               # everything above + typecheck + lint + drift check
+pnpm check:unicode        # dangerous-Unicode guard
+pnpm test                 # package unit tests (vitest)
+pnpm verify               # everything above + typecheck + lint + unit + drift
 ```
+
+### Supabase-CLI commands (require Docker)
+
+```bash
+pnpm storage:integration  # real Storage integration test against `supabase start`
+pnpm db:gen-types         # regenerate packages/server/src/db-types.ts
+```
+
+Install the Supabase CLI (https://supabase.com/docs/guides/cli) and run
+`supabase start` first. These are not part of `pnpm verify` (which needs no
+Docker); the Storage integration test runs in CI via
+`.github/workflows/storage-integration.yml`.
 
 Override database names via env (`SWAP_DEV_DB`, `SWAP_TEST_DB`, `SWAP_ADMIN_DB`,
 `SWAP_STORAGE_DB`, `SWAP_CONCURRENCY_DB`). See [testing.md](testing.md) for what

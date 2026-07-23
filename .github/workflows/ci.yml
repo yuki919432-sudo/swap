@@ -64,6 +64,9 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Unit tests (packages)
+        run: pnpm test
+
       - name: Clean migrate + pgTAP suite (tenant isolation, privilege, invitations)
         run: pnpm db:test
 

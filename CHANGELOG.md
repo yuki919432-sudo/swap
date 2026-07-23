@@ -5,6 +5,40 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Phase 1B.1/1B.2 — auth foundation + membership resolution (2026-07-23)
+
+Checkpoint work (no email OTP or listing CRUD yet). Phase 1A is merged to main;
+this is a separate branch/PR.
+
+**Shared server package (`@swap/server`)**
+- Typed AppErrors with client-safe serialization; PostgreSQL/PostgREST SQLSTATE →
+  AppError mapping; bounded retry with full jitter that retries ONLY genuinely
+  transient failures (40P01 deadlock, 40001 serialization) — never blind 23505.
+- Zod request validation; rate-limit interface + in-memory/noop limiters; audit
+  writer; auth context + MFA (aal2) guards; membership-status authz guards.
+- RPC boundary + anon/user/service Supabase client factories (service client is
+  server-only, browser-guarded). OAuth provider adapter interface + stubs.
+- Focused generated-style DB types (regenerate via `pnpm db:gen-types`).
+- 34 vitest unit tests.
+
+**Membership resolution (migration 0023, public SECURITY DEFINER RPCs)**
+- `get_membership_status`, `redeem_invitation` (wrapper), `resolve_roster_membership`,
+  `request_membership`, `review_membership_request`, `set_membership_status`.
+  Each re-checks authorization, respects the school's enabled methods, and audits.
+- TS flows in `@swap/server/membership` over these RPCs.
+- pgTAP `26_membership_flows.sql` (25 assertions); search_path meta-test now also
+  covers `public` SECURITY DEFINER functions.
+
+**Real Supabase Storage integration test**
+- `.github/workflows/storage-integration.yml` boots a disposable `supabase start`
+  stack, applies migrations clean, and runs
+  `supabase/tests/integration/storage.integration.mjs` (real Storage service),
+  proving all 11 requirements; tears down after. No production project/secrets.
+
+**CI**: main workflow now also runs `pnpm test` (unit). Full local `pnpm verify`
+(unicode, pgTAP 147, storage-replica 17, concurrency 25, enum parity 27, drift,
+typecheck, lint, unit 34) is green.
+
 ### Phase 1A final cleanup — dangerous-Unicode guard (2026-07-23)
 
 - Removed a non-ASCII em dash from `.env.example` (now plain ASCII); a full repo
