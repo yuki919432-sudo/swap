@@ -12,7 +12,7 @@ export async function getMembershipStatus(
   runner: RpcRunner,
   schoolId: string,
 ): Promise<MembershipStatus | null> {
-  const status = await runner.rpc<string | null>("membership_status", { p_school: schoolId });
+  const status = await runner.rpc<string | null>("get_membership_status", { p_school: schoolId });
   return (status as MembershipStatus | null) ?? null;
 }
 

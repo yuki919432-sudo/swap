@@ -101,7 +101,7 @@ export interface Database {
         Args: { p_membership: string; p_status: Database["public"]["Enums"]["membership_status"]; p_reason?: string | null };
         Returns: Json;
       };
-      membership_status: { Args: { p_school: string }; Returns: string | null };
+      get_membership_status: { Args: { p_school: string }; Returns: string | null };
     };
     Enums: {
       school_status: "active" | "disabled" | "pending";
