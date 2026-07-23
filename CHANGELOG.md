@@ -5,6 +5,16 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Phase 1A final cleanup — dangerous-Unicode guard (2026-07-23)
+
+- Removed a non-ASCII em dash from `.env.example` (now plain ASCII); a full repo
+  scan confirmed no bidirectional or hidden Unicode control characters anywhere.
+- Added `scripts/check-unicode.mjs` (`pnpm check:unicode`): fails when any tracked
+  text file contains bidi controls, zero-width/invisible formatting characters, a
+  BOM, or C0/C1 controls (other than tab/LF/CR). Ordinary printable punctuation is
+  allowed. Wired into `pnpm verify` (first step) and CI (early step); documented
+  in docs/testing.md. Self-tested to confirm it detects RLO + zero-width space.
+
 ### Phase 1A hardening — verification & CI (2026-07-23)
 
 Requested pre-approval hardening pass. No Phase 1B application code.

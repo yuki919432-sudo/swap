@@ -53,6 +53,9 @@ jobs:
           # psql/socket connections work without passwords.
           sudo -u postgres psql -c "create role runner superuser login createdb;"
 
+      - name: Dangerous-Unicode scan (bidi / zero-width / control chars)
+        run: pnpm check:unicode
+
       - name: Typecheck
         run: pnpm typecheck
 

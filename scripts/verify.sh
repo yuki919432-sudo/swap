@@ -16,16 +16,19 @@ cd "$ROOT_DIR"
 
 section() { printf '\n\033[1m==== %s ====\033[0m\n' "$1"; }
 
-section "1/7  clean migrate + pgTAP suite (cycle 1)"
+section "1/8  dangerous-Unicode scan (bidi / zero-width / control chars)"
+node scripts/check-unicode.mjs
+
+section "2/8  clean migrate + pgTAP suite (cycle 1)"
 bash scripts/db-test.sh
 
-section "2/7  reset + synthetic seed loads"
+section "3/8  reset + synthetic seed loads"
 bash scripts/db-reset.sh
 
-section "3/7  TypeScript <-> DB enum parity"
+section "4/8  TypeScript <-> DB enum parity"
 SWAP_ENUM_DB="${SWAP_DEV_DB:-swap_dev}" node --experimental-strip-types scripts/check-enum-parity.mjs
 
-section "4/7  schema repeatability / drift check (reset again, diff schema)"
+section "5/8  schema repeatability / drift check (reset again, diff schema)"
 SNAP1="$(mktemp)"; SNAP2="$(mktemp)"
 # Strip pg_dump's per-run random \restrict/\unrestrict nonce (not schema).
 dump_schema() { pg_dump --schema-only --no-owner --no-privileges -d "$1" | grep -vE '^\\(un)?restrict '; }
@@ -40,13 +43,13 @@ else
 fi
 rm -f "$SNAP1" "$SNAP2"
 
-section "5/7  storage-policy tests"
+section "6/8  storage-policy tests"
 bash scripts/db-test-storage.sh
 
-section "6/7  multi-connection concurrency tests"
+section "7/8  multi-connection concurrency tests"
 bash scripts/db-test-concurrency.sh
 
-section "7/7  typecheck + lint"
+section "8/8  typecheck + lint"
 pnpm typecheck
 pnpm lint
 

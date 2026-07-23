@@ -25,6 +25,7 @@
     "db:test:storage": "bash scripts/db-test-storage.sh",
     "db:test:concurrency": "bash scripts/db-test-concurrency.sh",
     "check:enum-parity": "node --experimental-strip-types scripts/check-enum-parity.mjs",
+    "check:unicode": "node scripts/check-unicode.mjs",
     "verify": "bash scripts/verify.sh"
   },
   "devDependencies": {

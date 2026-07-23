@@ -27,9 +27,22 @@ pnpm db:test              # clean DB + full pgTAP suite (pg_prove)
 pnpm db:test:storage      # storage-policy pgTAP (storage schema replica)
 pnpm db:test:concurrency  # multi-connection concurrency (node-postgres)
 pnpm check:enum-parity    # TS <-> DB enum parity (Node >= 22.6)
+pnpm check:unicode        # dangerous-Unicode guard (see below)
 pnpm typecheck            # tsc across packages
 pnpm lint                 # ESLint
 ```
+
+## Dangerous-Unicode guard
+
+`pnpm check:unicode` (`scripts/check-unicode.mjs`) scans every git-tracked text
+file and **fails** if it finds a bidirectional control (e.g. RLO/LRO/PDI),
+a zero-width or invisible formatting character, a byte-order mark, or a C0/C1
+control character other than tab/LF/CR. These "Trojan Source" characters can make
+reviewed source differ from what runs. Ordinary printable Unicode punctuation
+(em dashes, curly quotes, accents) is intentionally allowed. The scanner uses
+numeric codepoint ranges, so the scanner file is itself pure ASCII and never
+self-flags. It runs first in `pnpm verify` and as an early CI step, so dangerous
+characters cannot enter source, scripts, SQL, config, env-examples, or docs.
 
 ## One-time setup (Debian/Ubuntu)
 
@@ -56,6 +69,7 @@ checks.
 
 | Suite | Command | Result |
 | --- | --- | --- |
+| Dangerous-Unicode guard | `pnpm check:unicode` | 94 files scanned, **0 dangerous chars** |
 | pgTAP core | `pnpm db:test` | 13 files, **122 assertions**, 0 failed, 0 skipped |
 | Storage policies | `pnpm db:test:storage` | 1 file, **17 assertions**, 0 failed |
 | Concurrency | `pnpm db:test:concurrency` | **25 assertions**, 0 failed |
