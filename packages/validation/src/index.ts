@@ -7,6 +7,7 @@ import {
   COMMUNITY_POST_TYPE,
   VERIFICATION_METHOD,
   SCHOOL_ROLE,
+  MEMBERSHIP_STATUS,
   REPORT_TARGET_TYPE,
   REPORT_REASON,
   PROHIBITED_CATEGORIES,
@@ -55,6 +56,28 @@ export const manualRequestSchema = z.object({
   schoolEmail: email,
   gradYear: gradYear.optional(),
   explanation: mediumText.optional(),
+});
+
+/** Roster self-resolution: the server reads the verified email; only schoolId in. */
+export const resolveRosterSchema = z.object({ schoolId: uuid });
+
+/** Manual membership request (server reads the email from the session). */
+export const membershipRequestSchema = z.object({
+  schoolId: uuid,
+  gradYear: gradYear.optional(),
+  explanation: mediumText.optional(),
+});
+
+export const reviewMembershipRequestSchema = z.object({
+  requestId: uuid,
+  approve: z.boolean(),
+  reason: mediumText.optional(),
+});
+
+export const setMembershipStatusSchema = z.object({
+  membershipId: uuid,
+  status: zEnum(MEMBERSHIP_STATUS),
+  reason: mediumText.optional(),
 });
 
 /* --------------------------------------------------------------- Listings */
