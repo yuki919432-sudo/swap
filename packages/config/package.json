@@ -1,0 +1,30 @@
+{
+  "name": "@swap/config",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared ESLint, Prettier, and TypeScript configuration for the SWAP! monorepo.",
+  "type": "module",
+  "exports": {
+    "./eslint": "./eslint/index.mjs",
+    "./prettier": "./prettier/index.mjs",
+    "./tsconfig": "./tsconfig/base.json"
+  },
+  "files": [
+    "eslint",
+    "prettier",
+    "tsconfig"
+  ],
+  "peerDependencies": {
+    "eslint": ">=9",
+    "prettier": ">=3",
+    "typescript": ">=5"
+  },
+  "dependencies": {
+    "@eslint/js": "^9.13.0",
+    "typescript-eslint": "^8.11.0"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.11.0",
+    "@typescript-eslint/parser": "^8.11.0"
+  }
+}

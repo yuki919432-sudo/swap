@@ -1,0 +1,38 @@
+{
+  "name": "swap",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SWAP! — a private, school-scoped marketplace and community platform.",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "build": "pnpm -r --if-present build",
+    "db:start": "bash scripts/db-start.sh",
+    "db:reset": "bash scripts/db-reset.sh",
+    "db:test": "bash scripts/db-test.sh",
+    "db:seed": "bash scripts/db-seed.sh",
+    "db:test:storage": "bash scripts/db-test-storage.sh",
+    "db:test:concurrency": "bash scripts/db-test-concurrency.sh",
+    "check:enum-parity": "node --experimental-strip-types scripts/check-enum-parity.mjs",
+    "check:unicode": "node scripts/check-unicode.mjs",
+    "verify": "bash scripts/verify.sh"
+  },
+  "devDependencies": {
+    "@swap/config": "workspace:*",
+    "eslint": "^9.13.0",
+    "pg": "^8.13.1",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3"
+  }
+}
