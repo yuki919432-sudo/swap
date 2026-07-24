@@ -97,6 +97,13 @@ as the tenant key. See [storage.md](storage.md).
 - Maintenance functions (`anonymize_user`, `expire_stale_content`,
   `purge_expired_ephemeral`) have `EXECUTE` revoked from `PUBLIC` and granted only
   to `service_role`, so application users cannot invoke them.
+- **Function EXECUTE allowlist (migration 0024):** client EXECUTE on all `app`
+  functions is revoked and re-granted only to an explicit allowlist (RLS helpers +
+  client-callable RPCs). `app.write_audit` is never client-executable, so audit
+  rows cannot be forged. PostgreSQL's built-in PUBLIC EXECUTE on *new* functions
+  cannot be stripped via default privileges, so the CI test
+  `28_function_privileges.sql` is the authoritative safety net: any app/public
+  function executable by `authenticated` but not on the allowlist fails CI.
 - Storage read policies include school staff / platform admin (not only verified
   members) so moderation deletes can see the target object; see [storage.md](storage.md).
 
