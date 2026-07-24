@@ -30,32 +30,46 @@ skipped on bare local Postgres (no `storage` schema).
 - File type and size are enforced by bucket `allowed_mime_types` +
   `file_size_limit`; clients should also compress images before upload.
 
-## Integration testing
+## Testing (two layers)
 
-Storage policy **logic** is tested automatically against a faithful local replica
-of the Supabase `storage` schema (`supabase/tests/setup/02_storage_stub.sql` +
-`supabase/tests/storage/01_storage_policies.sql`, run by `pnpm db:test:storage`).
-This exercises the real migration-0022 object policies: authorized upload,
-cross-school upload denial, cross-school read denial, owner vs. non-owner delete,
-moderator scope, cross-school moderation denial, suspended-member loss, and
-invalid-path safety.
+**1. Fast policy-replica unit tests** — `pnpm db:test:storage`. Runs the real
+migration-0022 object policies against a faithful local replica of the Supabase
+`storage` schema (`supabase/tests/setup/02_storage_stub.sql` +
+`supabase/tests/storage/01_storage_policies.sql`). Exercises the policy LOGIC
+(authorized upload, cross-school denials, owner/non-owner/moderator delete,
+suspended-member loss, invalid-path safety) with no Docker.
 
-What the replica does **not** cover — and must be checked against a real,
-disposable, **non-production** Supabase environment before launch:
+**2. Real Storage integration test** — the actual Supabase Storage service on a
+disposable local stack. Automated in CI by
+`.github/workflows/storage-integration.yml`:
 
-1. `supabase start` (local Docker) or a dedicated test project — both provide the
-   real `storage` schema and storage API.
-2. Apply migrations (`supabase db push`); migration 0022 creates the buckets and
-   policies.
-3. With a verified School A member's session, upload to
-   `listing-images/<schoolA>/<listingA>/…` (expect success) and to a School B
-   path (expect failure); attempt to download a private School B object (expect
-   failure); verify MIME/size limits reject disallowed/oversized files.
-4. Confirm owner-only delete and moderator moderation as above.
+- boots `supabase start` on the runner (a throwaway stack, throwaway keys),
+- applies every migration from a clean state (`supabase db reset`),
+- runs `supabase/tests/integration/storage.integration.mjs`,
+- tears the stack down; never touches production; needs no production secrets.
 
-Credentials for a test project belong in environment variables / CI secrets
-(documented in `.env.example`), never committed. Do not run these against a
-production project.
+It proves all 11 requirements end-to-end through the real service: authorized
+upload; cross-school upload denial; private cross-school read denial; owner
+delete; non-owner delete denial; moderator remove within scope; cross-school
+moderation denial; suspended-member loss; malformed/manipulated path rejection;
+service-level MIME + size enforcement; and that signed URLs do not expose
+unauthorized private objects.
+
+Run it locally the same way (requires Docker + the Supabase CLI):
+
+```bash
+supabase start
+supabase db reset --no-seed
+export SUPABASE_URL=...        # from `supabase status -o json` (API_URL)
+export SUPABASE_ANON_KEY=...   # ANON_KEY
+export SUPABASE_SERVICE_ROLE_KEY=...  # SERVICE_ROLE_KEY
+pnpm storage:integration
+supabase stop
+```
+
+Do not run these against a production or pilot project. The fast replica tests
+remain the unit-level check; this integration job is additional, not a
+replacement.
 
 ## Upload flow (later phases)
 

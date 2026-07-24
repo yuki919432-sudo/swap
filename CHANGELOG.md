@@ -5,6 +5,75 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Phase 1B checkpoint hardening — security review fixes (2026-07-24)
+
+Pre-approval hardening from a code-level security review. Still no Phase 1B.3+.
+
+**Audit-log forgery prevention (migration 0024)**
+- `app.write_audit` is no longer executable by any client role. Client EXECUTE on
+  all `app` functions is revoked and re-granted to an explicit allowlist (RLS
+  helpers + client-callable RPCs). Internal SECURITY DEFINER callers still write
+  audit rows (they run as the function owner).
+- pgTAP `28_function_privileges.sql`: proves write_audit is not client-executable,
+  audit rows can't be forged, EXECUTE matches the allowlist, and an un-approved
+  new function is caught by the allowlist (the CI safety net — PostgreSQL's
+  built-in PUBLIC EXECUTE on new functions cannot be stripped via default privs).
+
+**Membership state guards + method/validation enforcement (migration 0025)**
+- Suspended/rejected memberships can never self-verify via roster or invitation;
+  the membership row is locked before its state is evaluated (no lost concurrent
+  suspension). Blocked attempts change nothing: no status change, no invitation
+  use consumed, no `invite_code_uses` row, no roster overwrite, no success audit;
+  stable typed errors `membership_suspended` / `membership_rejected`.
+- Already-verified redemption is idempotent and consumes no use.
+- Every membership RPC enforces the school's active status and enabled
+  verification methods IN THE DATABASE, plus input validation (explanation/reason
+  length, graduation-year range, invitation-code length) mirroring
+  `@swap/validation`. Documented in docs/membership-states.md.
+- pgTAP `27_membership_state_guards.sql` (26 assertions) + concurrency Scenario 5
+  (concurrent suspension vs. self-verification).
+
+**TS**: new stable error codes `membership_suspended` / `membership_rejected` and
+`invalid_input` → `validation_failed` mapping, with unit tests.
+
+**CI note**: GitHub runners emit a Node-20-action deprecation warning for
+`actions/checkout@v4` etc.; these are the current maintained majors, so it is
+non-blocking and left as-is until a maintained upgrade exists.
+
+### Phase 1B.1/1B.2 — auth foundation + membership resolution (2026-07-23)
+
+Checkpoint work (no email OTP or listing CRUD yet). Phase 1A is merged to main;
+this is a separate branch/PR.
+
+**Shared server package (`@swap/server`)**
+- Typed AppErrors with client-safe serialization; PostgreSQL/PostgREST SQLSTATE →
+  AppError mapping; bounded retry with full jitter that retries ONLY genuinely
+  transient failures (40P01 deadlock, 40001 serialization) — never blind 23505.
+- Zod request validation; rate-limit interface + in-memory/noop limiters; audit
+  writer; auth context + MFA (aal2) guards; membership-status authz guards.
+- RPC boundary + anon/user/service Supabase client factories (service client is
+  server-only, browser-guarded). OAuth provider adapter interface + stubs.
+- Focused generated-style DB types (regenerate via `pnpm db:gen-types`).
+- 34 vitest unit tests.
+
+**Membership resolution (migration 0023, public SECURITY DEFINER RPCs)**
+- `get_membership_status`, `redeem_invitation` (wrapper), `resolve_roster_membership`,
+  `request_membership`, `review_membership_request`, `set_membership_status`.
+  Each re-checks authorization, respects the school's enabled methods, and audits.
+- TS flows in `@swap/server/membership` over these RPCs.
+- pgTAP `26_membership_flows.sql` (25 assertions); search_path meta-test now also
+  covers `public` SECURITY DEFINER functions.
+
+**Real Supabase Storage integration test**
+- `.github/workflows/storage-integration.yml` boots a disposable `supabase start`
+  stack, applies migrations clean, and runs
+  `supabase/tests/integration/storage.integration.mjs` (real Storage service),
+  proving all 11 requirements; tears down after. No production project/secrets.
+
+**CI**: main workflow now also runs `pnpm test` (unit). Full local `pnpm verify`
+(unicode, pgTAP 147, storage-replica 17, concurrency 25, enum parity 27, drift,
+typecheck, lint, unit 34) is green.
+
 ### Phase 1A final cleanup — dangerous-Unicode guard (2026-07-23)
 
 - Removed a non-ASCII em dash from `.env.example` (now plain ASCII); a full repo

@@ -1,0 +1,38 @@
+# Supabase local project configuration.
+#
+# Used by the Supabase CLI to boot a disposable local stack (`supabase start`)
+# for the Storage integration test in CI. It is NOT a production project and
+# holds no secrets — the CLI mints throwaway local keys at start time.
+
+project_id = "swap"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+# The Supabase CLI's local stack uses Postgres 17. Our migrations are
+# version-agnostic (no 16/17-specific SQL); the pgTAP suite runs on 16 in ci.yml.
+major_version = 17
+
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:3000"
+jwt_expiry = 3600
+enable_signup = true
+minimum_password_length = 8
+
+[auth.email]
+enable_signup = true
+# Integration test users are created pre-confirmed via the admin API, so email
+# confirmation is not required for password sign-in in this local stack.
+enable_confirmations = false
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"

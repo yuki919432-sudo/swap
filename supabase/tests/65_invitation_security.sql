@@ -7,6 +7,8 @@ select no_plan();
 insert into schools (id, name, slug, status) values
   ('a0000000-0000-0000-0000-0000000000aa', 'School A', 'school-a', 'active'),
   ('b0000000-0000-0000-0000-0000000000bb', 'School B', 'school-b', 'active');
+insert into school_settings (school_id, enabled_verification_methods) values
+  ('a0000000-0000-0000-0000-0000000000aa', array['invite_code','manual']::verification_method[]);
 insert into auth.users (id) values
   ('aaaa00ad-0000-0000-0000-0000000000ad'),  -- admin A
   ('00000001-0000-0000-0000-000000000001'),

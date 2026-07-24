@@ -49,8 +49,9 @@ bash scripts/db-test-storage.sh
 section "7/8  multi-connection concurrency tests"
 bash scripts/db-test-concurrency.sh
 
-section "8/8  typecheck + lint"
+section "8/8  typecheck + lint + unit tests"
 pnpm typecheck
 pnpm lint
+pnpm test
 
 printf '\n\033[1;32mVERIFY PASSED\033[0m — all checks green.\n'
