@@ -65,6 +65,10 @@ async function seedBase(admin) {
   await admin.query(`insert into schools (id, name, slug, status) values ($1,'Conc School','conc-school','active')`, [
     school,
   ]);
+  await admin.query(
+    `insert into school_settings (school_id, enabled_verification_methods) values ($1, array['invite_code','roster','manual']::verification_method[])`,
+    [school],
+  );
   const users = [seller, ...buyers];
   for (const u of users) {
     await admin.query(`insert into auth.users (id) values ($1)`, [u]);
@@ -343,6 +347,76 @@ async function scenarioInvitationRace(admin) {
   ok(iu.rows[0].n === 1, "exactly one invite_code_uses row exists");
 }
 
+// ---- Scenario 5: concurrent admin suspension vs. self-verification --------
+async function scenarioSuspendVsVerify(admin) {
+  console.log("# Scenario 5: concurrent suspension vs. invitation self-verification");
+  const schoolX = randomUUID();
+  const adminX = randomUUID();
+  const userX = randomUUID();
+  const code = "SUSPEND-RACE-CODE";
+  const invId = randomUUID();
+  const memId = randomUUID();
+
+  await admin.query(`insert into schools (id, name, slug, status) values ($1,'X','x-susp','active')`, [schoolX]);
+  await admin.query(
+    `insert into school_settings (school_id, enabled_verification_methods) values ($1, array['invite_code']::verification_method[])`,
+    [schoolX],
+  );
+  for (const [u, name] of [
+    [adminX, "Admin"],
+    [userX, "User"],
+  ]) {
+    await admin.query(`insert into auth.users (id) values ($1)`, [u]);
+    await admin.query(`insert into public.users (id, display_name) values ($1,$2)`, [u, name]);
+  }
+  await admin.query(`insert into school_admins (school_id, user_id, role) values ($1,$2,'school_admin')`, [schoolX, adminX]);
+  // The user starts PENDING (so both transactions contend on the same row).
+  await admin.query(
+    `insert into school_memberships (id, school_id, user_id, status, verification_method) values ($1,$2,$3,'pending','invite_code')`,
+    [memId, schoolX, userX],
+  );
+  await admin.query(
+    `insert into invitations (id, school_id, code_prefix, code_hash, type, max_uses, uses_count) values ($1,$2,left($3,9),app.hash_code($3),'shared',10,0)`,
+    [invId, schoolX, code],
+  );
+
+  const a = newClient();
+  const b = newClient();
+  await a.connect();
+  await b.connect();
+  let bErr = null;
+  try {
+    await auth(a, adminX);
+    await auth(b, userX);
+    await a.query("begin");
+    await b.query("begin");
+    // A suspends (locks + updates the membership row); holds the lock.
+    await a.query("select public.set_membership_status($1, 'suspended', 'policy')", [memId]);
+    // B attempts to self-verify; redeem locks the membership row -> blocks.
+    const bPromise = b.query("select public.redeem_invitation($1)", [code]).catch((e) => {
+      bErr = e;
+    });
+    ok(await waitForLock(admin, "redeem_invitation"), "the redemption blocks on the membership row lock");
+    await a.query("commit"); // suspension commits -> B re-reads suspended
+    await bPromise;
+    await b.query("rollback").catch(() => {});
+  } finally {
+    await a.end();
+    await b.end();
+  }
+
+  ok(
+    bErr !== null && errcode(bErr) === "P0001" && /membership_suspended/.test(bErr.message ?? ""),
+    "the concurrent self-verification loses safely with membership_suspended",
+  );
+  const st = await admin.query(`select status from school_memberships where id=$1`, [memId]);
+  ok(st.rows[0].status === "suspended", "the membership ends deterministically suspended");
+  const uc = await admin.query(`select uses_count from invitations where id=$1`, [invId]);
+  ok(uc.rows[0].uses_count === 0, "the blocked redemption consumed no invitation use");
+  const iu = await admin.query(`select count(*)::int n from invite_code_uses where user_id=$1`, [userX]);
+  ok(iu.rows[0].n === 0, "the blocked redemption created no invite_code_uses row");
+}
+
 async function main() {
   const admin = newClient();
   await admin.connect();
@@ -352,6 +426,7 @@ async function main() {
     await scenarioMultiOverlap(admin);
     await scenarioDeadlock(admin);
     await scenarioInvitationRace(admin);
+    await scenarioSuspendVsVerify(admin);
   } finally {
     await admin.end();
   }

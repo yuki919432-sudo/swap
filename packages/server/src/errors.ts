@@ -8,6 +8,8 @@ export type AppErrorCode =
   | "unauthenticated"
   | "forbidden"
   | "membership_required"
+  | "membership_suspended"
+  | "membership_rejected"
   | "not_found"
   | "validation_failed"
   | "conflict"
@@ -20,6 +22,8 @@ const DEFAULT_STATUS: Record<AppErrorCode, number> = {
   unauthenticated: 401,
   forbidden: 403,
   membership_required: 403,
+  membership_suspended: 403,
+  membership_rejected: 403,
   not_found: 404,
   validation_failed: 400,
   conflict: 409,
@@ -76,6 +80,10 @@ export const forbidden = (message = "forbidden", o?: AppErrorOptions) =>
   new AppError("forbidden", message, o);
 export const membershipRequired = (message = "membership_required", o?: AppErrorOptions) =>
   new AppError("membership_required", message, o);
+export const membershipSuspended = (message = "membership_suspended", o?: AppErrorOptions) =>
+  new AppError("membership_suspended", message, o);
+export const membershipRejected = (message = "membership_rejected", o?: AppErrorOptions) =>
+  new AppError("membership_rejected", message, o);
 export const notFound = (message = "not_found", o?: AppErrorOptions) =>
   new AppError("not_found", message, o);
 export const validationFailed = (message = "validation_failed", o?: AppErrorOptions) =>

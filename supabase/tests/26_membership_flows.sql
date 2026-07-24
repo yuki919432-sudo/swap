@@ -10,7 +10,7 @@ insert into schools (id, name, slug, status) values
   ('bbbb0000-0000-0000-0000-0000000000bb', 'School B', 'school-b', 'active');
 -- A enables roster; B does not.
 insert into school_settings (school_id, enabled_verification_methods) values
-  ('aaaa0000-0000-0000-0000-0000000000aa', array['roster','manual','email_otp']::verification_method[]),
+  ('aaaa0000-0000-0000-0000-0000000000aa', array['roster','manual','email_otp','invite_code']::verification_method[]),
   ('bbbb0000-0000-0000-0000-0000000000bb', array['manual','email_otp']::verification_method[]);
 
 insert into auth.users (id, email, email_confirmed_at) values

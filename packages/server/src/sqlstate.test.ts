@@ -40,6 +40,22 @@ describe("mapPostgresError", () => {
     });
   });
 
+  it("maps membership state + input errors to stable typed codes", () => {
+    expect(mapPostgresError({ code: "P0001", message: "membership_suspended" })).toMatchObject({
+      code: "membership_suspended",
+    });
+    expect(mapPostgresError({ code: "P0001", message: "membership_rejected" })).toMatchObject({
+      code: "membership_rejected",
+    });
+    expect(mapPostgresError({ code: "P0001", message: "invalid_input:explanation" })).toMatchObject({
+      code: "validation_failed",
+    });
+    expect(mapPostgresError({ code: "P0001", message: "method_not_enabled" })).toMatchObject({
+      code: "forbidden",
+      message: "verification_method_not_enabled",
+    });
+  });
+
   it("maps unknown raised messages to a conflict, and unknown SQLSTATE to internal", () => {
     expect(mapPostgresError({ code: "P0001", message: "some_new_rule" })).toMatchObject({ code: "conflict" });
     expect(mapPostgresError({ code: "XX000" })).toMatchObject({ code: "internal" });
