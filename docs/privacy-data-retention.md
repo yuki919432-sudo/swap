@@ -33,8 +33,9 @@ personal information necessary and never expose it publicly.
 
 | Data | Retention | Mechanism |
 | --- | --- | --- |
-| OTP codes | expiry + 1 day grace | `app.purge_expired_ephemeral` |
-| Email delivery logs | 180 days | `app.purge_expired_ephemeral` |
+| OTP challenges (consumed / superseded / expired) | expiry + 1 day grace | `app.purge_expired_otp` (also run by `app.purge_expired_ephemeral`) |
+| Failed OTP attempts | held on the challenge row; deleted with it | `app.purge_expired_otp` |
+| Email delivery / bounce events | 180 days | `app.purge_expired_ephemeral` |
 | Invalid device tokens | pruned each run | `app.purge_expired_ephemeral` |
 | Abandoned drafts | 90 days | `app.purge_expired_ephemeral` |
 | Stale offers | 30 days → `expired` | `app.expire_stale_content` |

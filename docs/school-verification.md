@@ -30,12 +30,14 @@ tenants require admin consent; document the app's required delegated permissions
 ## Method C — School email OTP
 
 A short expiring code emailed via Postmark from a dedicated sending subdomain.
-Codes are hashed (`private.otp_codes.code_hash`), expiring, attempt-limited,
-resend-cooldown and daily-capped, with brute-force lockout. Never send production
-OTP from a dev server. See [email-deliverability.md](email-deliverability.md).
+Codes are hashed (`private.otp_challenges.code_hash` = `sha256(salt‖code)`),
+expiring, attempt-limited, resend-cooldown and daily-capped, with brute-force
+lockout. The plaintext code is never stored. Never send production OTP from a dev
+server. Full design, state diagram, and security model: **[otp.md](otp.md)**; see
+also [email-deliverability.md](email-deliverability.md).
 
 Tuning via env: `OTP_LENGTH`, `OTP_TTL_SECONDS`, `OTP_MAX_ATTEMPTS`,
-`OTP_RESEND_COOLDOWN_SECONDS`, `OTP_DAILY_CAP_PER_EMAIL`.
+`OTP_RESEND_COOLDOWN_SECONDS`, `OTP_DAILY_CAP_PER_EMAIL`, `OTP_DAILY_CAP_PER_USER`.
 
 ## Method D — Pre-approved roster
 
