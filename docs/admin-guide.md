@@ -28,9 +28,13 @@ credentials.
 ## School dashboard (later phase) surfaces
 
 Pending membership requests · verified/suspended members · approved domains ·
-verification-method settings · roster import (CSV) · invitation management ·
-listings · events · reports · announcements · safe handoff locations · school
-settings · basic analytics · audit logs.
+verification-method settings · **optional** roster import (CSV) · invitation
+management · listings · events · reports · announcements · safe handoff locations
+· school settings · basic analytics · audit logs.
+
+New pilot schools default to **invitation codes + manual approval** only; email
+OTP, OAuth, and roster matching are opt-in per school. Roster import is never
+required to run a school — see [school-verification.md](school-verification.md).
 
 ## School settings
 

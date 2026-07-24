@@ -50,8 +50,9 @@ Edge Functions handle logic that needs the service role or external providers
 
 Six configurable methods funnel through a single membership pipeline so no school
 is blocked by any one method failing: Google OAuth, Microsoft OAuth, school-email
-OTP, pre-approved roster, invitation codes, and manual approval. Details and
-flows in [school-verification.md](school-verification.md).
+OTP, invitation codes, manual approval, and — **optionally** — pre-approved roster
+matching. Roster is never required; the pilot default is invitation codes + manual
+approval. Details and flows in [school-verification.md](school-verification.md).
 
 ## 6. Marketplace data flow
 

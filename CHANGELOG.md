@@ -5,6 +5,32 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Correction — roster is an optional adapter, never a dependency (2026-07-24)
+
+Student roster access is optional (privacy / institutional / contractual /
+operational constraints), so the product must be fully usable with no roster
+integration.
+
+- **Migration 0027**: `school_settings.enabled_verification_methods` default
+  changed from `{email_otp, manual}` to **`{invite_code, manual}`** — the pilot
+  default. Email OTP is opt-in after deliverability is confirmed; Google/Microsoft
+  OAuth opt-in once the institution permits the app; roster opt-in only when a
+  school lawfully provides roster data.
+- Roster is never required to create a school, launch a pilot, approve members, or
+  use the marketplace / community / admin tools. `resolve_roster_membership`
+  already returns `method_not_enabled` unless the school enabled roster.
+- pgTAP `24_verification_defaults.sql`: the default is `{invite_code, manual}`,
+  roster is not enabled by default, roster resolution is refused on a default
+  school, and manual approval works with no roster involved (suite now 222).
+- Seed sets explicit per-school posture (one school invite+manual+OTP with **no**
+  roster; one school additionally demonstrates the optional roster adapter — all
+  synthetic).
+- Docs updated to describe roster as an optional verification method (priority
+  order, default pilot config, roster-privacy: explicit authorization, minimal
+  email-only data, no student exposure, school-removable, retention/deletion,
+  never real data in tests/seeds): `school-verification.md`, `architecture.md`,
+  `admin-guide.md`, `privacy-data-retention.md`.
+
 ### Phase 1B.3 — Email OTP (Verification Method C) (2026-07-24)
 
 Email-OTP infrastructure + end-to-end authorization tests. No listing/community
