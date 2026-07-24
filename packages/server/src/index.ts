@@ -9,5 +9,8 @@ export * from "./authz.js";
 export * from "./runner.js";
 export * from "./supabase.js";
 export * from "./membership.js";
+export * from "./otp.js";
+export * from "./email/provider.js";
+export * from "./email/webhook.js";
 export * from "./oauth.js";
 export type { Database, Json } from "./db-types.js";

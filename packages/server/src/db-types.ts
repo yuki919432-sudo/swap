@@ -102,6 +102,41 @@ export interface Database {
         Returns: Json;
       };
       get_membership_status: { Args: { p_school: string }; Returns: string | null };
+      request_otp_challenge: {
+        Args: {
+          p_user: string;
+          p_school: string;
+          p_email_normalized: string;
+          p_purpose?: string;
+          p_code_hash: string;
+          p_code_salt: string;
+          p_ttl?: string;
+          p_resend_cooldown?: string;
+          p_daily_cap_email?: number;
+          p_daily_cap_user?: number;
+        };
+        Returns: string;
+      };
+      verify_email_otp: {
+        Args: { p_school: string; p_code: string; p_purpose?: string };
+        Returns: Json;
+      };
+      record_email_event: {
+        Args: {
+          p_provider: string;
+          p_provider_message_id: string;
+          p_event: string;
+          p_email_normalized?: string | null;
+          p_school?: string | null;
+          p_detail?: Json;
+          p_signature_verified?: boolean;
+        };
+        Returns: boolean;
+      };
+      get_email_delivery_status: {
+        Args: { p_school: string; p_limit?: number };
+        Returns: Json;
+      };
     };
     Enums: {
       school_status: "active" | "disabled" | "pending";
