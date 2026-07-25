@@ -38,7 +38,7 @@ function asRecord(json: Json): Record<string, unknown> {
   throw internal("unexpected_rpc_response");
 }
 
-function toMembership(json: Json): MembershipSummary {
+export function toMembership(json: Json): MembershipSummary {
   const r = asRecord(json);
   return {
     id: String(r.id),

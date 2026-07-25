@@ -21,7 +21,7 @@ history is preserved and never hard-deleted through the client.
 | 0001 | extensions_schemas | `pg_trgm`; `app` + `private` schemas |
 | 0002 | enums | All enum types (mirror `packages/types/src/enums.ts`) |
 | 0003 | identity_core | schools, school_domains, school_settings, safe_handoff_locations, users, user_preferences |
-| 0004 | private_identity | private.user_emails, private.otp_codes, private.email_events |
+| 0004 | private_identity | private.user_emails, private.email_events (placeholder private.otp_codes, retired in 0026) |
 | 0005 | memberships | school_memberships, school_admins, membership_requests, student_roster_entries |
 | 0006 | platform_admins | platform_admins |
 | 0007 | invitations | invitations (hashed), invite_code_uses |
@@ -67,7 +67,8 @@ unread — correction #2), `messages`.
 
 **Notifications & platform:** `notifications`, `device_tokens`, `feature_flags`.
 
-**Private:** `private.user_emails`, `private.otp_codes`, `private.email_events`.
+**Private:** `private.user_emails`, `private.otp_challenges` (added in 0026),
+`private.email_events`.
 
 ## Key invariants (enforced in-DB)
 
@@ -87,4 +88,5 @@ Soft deletion (`deleted_at`) on listings / events / community_posts /
 announcements. Account states via `users.account_status`
 (`active|deletion_requested|deactivated|anonymized`). Maintenance functions
 (service role): `app.expire_stale_content`, `app.purge_expired_ephemeral`,
-`app.anonymize_user`. See [privacy-data-retention.md](privacy-data-retention.md).
+`app.purge_expired_otp`, `app.anonymize_user`. See
+[privacy-data-retention.md](privacy-data-retention.md).

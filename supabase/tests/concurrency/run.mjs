@@ -417,6 +417,88 @@ async function scenarioSuspendVsVerify(admin) {
   ok(iu.rows[0].n === 0, "the blocked redemption created no invite_code_uses row");
 }
 
+// ---- Scenario 6: two simultaneous final OTP verifications -----------------
+async function scenarioOtpVerifyRace(admin) {
+  console.log("# Scenario 6: concurrent verification of one email OTP challenge");
+  const schoolY = randomUUID();
+  const userY = randomUUID();
+  const emailY = "otp-race@a.test";
+  const code = "424242";
+  const salt = "concurrency-salt";
+
+  await admin.query(`insert into schools (id, name, slug, status) values ($1,'Y','y-otp','active')`, [schoolY]);
+  await admin.query(
+    `insert into school_settings (school_id, enabled_verification_methods) values ($1, array['email_otp']::verification_method[])`,
+    [schoolY],
+  );
+  await admin.query(`insert into auth.users (id, email, email_confirmed_at) values ($1,$2, now())`, [userY, emailY]);
+  await admin.query(`insert into public.users (id, display_name) values ($1,'U')`, [userY]);
+  // One active challenge, correct code known. Hash matches verify_email_otp's
+  // encode(sha256(salt||code)); email_hash matches app.hash_email(email).
+  await admin.query(
+    `insert into private.otp_challenges
+       (user_id, school_id, purpose, email_normalized, email_hash, code_hash, code_salt, expires_at)
+     values ($1,$2,'school_membership_verification',$3, app.hash_email($3),
+             encode(sha256(convert_to($4 || $5, 'UTF8')), 'hex'), $4, now() + interval '10 minutes')`,
+    [userY, schoolY, emailY, salt, code],
+  );
+
+  const a = newClient();
+  const b = newClient();
+  await a.connect();
+  await b.connect();
+  let aRes = null;
+  let bRes = null;
+  let aErr = null;
+  let bErr = null;
+  try {
+    await auth(a, userY);
+    await auth(b, userY);
+    await a.query("begin");
+    await b.query("begin");
+    // A verifies and holds the challenge row lock (consumes on success).
+    const ra = await a.query("select public.verify_email_otp($1,$2) as r", [schoolY, code]).catch((e) => {
+      aErr = e;
+      return null;
+    });
+    if (ra) aRes = ra.rows[0].r;
+    // B verifies concurrently; it blocks on the challenge row FOR UPDATE.
+    const bPromise = b
+      .query("select public.verify_email_otp($1,$2) as r", [schoolY, code])
+      .then((r) => {
+        bRes = r.rows[0].r;
+      })
+      .catch((e) => {
+        bErr = e;
+      });
+    ok(await waitForLock(admin, "verify_email_otp"), "the second verification blocks on the challenge row lock");
+    await a.query("commit"); // consumption commits -> B re-reads, finds no active challenge
+    await bPromise;
+    await b.query("rollback").catch(() => {});
+  } finally {
+    await a.end();
+    await b.end();
+  }
+
+  ok(aErr === null && bErr === null, "neither verification raised (result-object contract holds)");
+  const aOk = aRes && aRes.ok === true;
+  const bOk = bRes && bRes.ok === true;
+  ok([aOk, bOk].filter(Boolean).length === 1, "exactly one verification succeeds");
+  const loser = aOk ? bRes : aRes;
+  ok(loser && loser.ok === false && loser.error === "otp_invalid", "the losing verification safely returns otp_invalid");
+
+  const mc = await admin.query(
+    `select count(*)::int n from school_memberships where school_id=$1 and user_id=$2 and status='verified'`,
+    [schoolY, userY],
+  );
+  ok(mc.rows[0].n === 1, "exactly one verified membership was created (no double verification)");
+  const cc = await admin.query(
+    `select count(*)::int n from private.otp_challenges where user_id=$1 and consumed_at is not null`,
+    [userY],
+  );
+  ok(cc.rows[0].n === 1, "the challenge is consumed exactly once");
+}
+
 async function main() {
   const admin = newClient();
   await admin.connect();
@@ -427,6 +509,7 @@ async function main() {
     await scenarioDeadlock(admin);
     await scenarioInvitationRace(admin);
     await scenarioSuspendVsVerify(admin);
+    await scenarioOtpVerifyRace(admin);
   } finally {
     await admin.end();
   }

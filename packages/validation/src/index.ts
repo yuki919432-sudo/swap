@@ -47,6 +47,17 @@ export const verifyOtpSchema = z.object({
     .regex(/^\d{6}$/, "otp_must_be_6_digits"),
 });
 
+/** Email OTP verification (Method C): 6-digit code + optional challenge purpose. */
+export const verifyEmailOtpSchema = z.object({
+  schoolId: uuid,
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, "otp_must_be_6_digits"),
+  purpose: z.string().trim().max(64).optional(),
+});
+export type VerifyEmailOtpInput = z.infer<typeof verifyEmailOtpSchema>;
+
 export const redeemInviteSchema = z.object({
   code: z.string().trim().min(6).max(64),
 });

@@ -5,6 +5,99 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Correction — roster is an optional adapter, never a dependency (2026-07-24)
+
+Student roster access is optional (privacy / institutional / contractual /
+operational constraints), so the product must be fully usable with no roster
+integration.
+
+- **Migration 0027**: `school_settings.enabled_verification_methods` default
+  changed from `{email_otp, manual}` to **`{invite_code, manual}`** — the pilot
+  default. Email OTP is opt-in after deliverability is confirmed; Google/Microsoft
+  OAuth opt-in once the institution permits the app; roster opt-in only when a
+  school lawfully provides roster data.
+- Roster is never required to create a school, launch a pilot, approve members, or
+  use the marketplace / community / admin tools. `resolve_roster_membership`
+  already returns `method_not_enabled` unless the school enabled roster.
+- pgTAP `24_verification_defaults.sql`: the default is `{invite_code, manual}`,
+  roster is not enabled by default, roster resolution is refused on a default
+  school, and manual approval works with no roster involved (suite now 222).
+- Seed sets explicit per-school posture (one school invite+manual+OTP with **no**
+  roster; one school additionally demonstrates the optional roster adapter — all
+  synthetic).
+- Docs updated to describe roster as an optional verification method (priority
+  order, default pilot config, roster-privacy: explicit authorization, minimal
+  email-only data, no student exposure, school-removable, retention/deletion,
+  never real data in tests/seeds): `school-verification.md`, `architecture.md`,
+  `admin-guide.md`, `privacy-data-retention.md`.
+
+### Phase 1B.3 — Email OTP (Verification Method C) (2026-07-24)
+
+Email-OTP infrastructure + end-to-end authorization tests. No listing/community
+CRUD, no dashboards, no external AI moderation, no production deploy.
+
+**Challenge model + flows (migration 0026)**
+- `private.otp_challenges` (no client grants) binds each challenge to
+  `(user_id, school_id, email_hash, purpose)`. Stores only `sha256(salt‖code)` +
+  salt — **the plaintext OTP is never stored** anywhere. At most one active
+  challenge per key (partial unique index); issuing a new one atomically
+  supersedes the prior active one.
+- `public.request_otp_challenge(...)` (**service-role only**) enforces school
+  active + `email_otp` enabled + resend cooldown + per-email/per-user daily caps,
+  supersedes, and inserts — all transactionally in the database.
+- `public.verify_email_otp(...)` (`authenticated`) locks the active challenge,
+  rejects expired/consumed/superseded/locked, enforces the attempt limit +
+  15-minute lockout, compares by hash, consumes atomically (replay-safe), and
+  applies the approved membership transition only from `pending/left/expired/none`.
+  Suspended/rejected are blocked with no partial membership. Returns a result
+  object `{ ok, error?, membership? }` so `attempts++`/lockout side effects persist.
+  The email is read from the caller's own session — never client input — so a
+  School A OTP can never verify School B and an OTP can never be used by another
+  user.
+- Delivery events: `public.record_email_event(...)` (**service-role only**,
+  idempotent via a unique index) + `public.get_email_delivery_status(...)`
+  (role-gated, **masked** emails). `app.purge_expired_otp(...)` retention.
+- Retired the unused Phase-1A placeholder `private.otp_codes`; folded its purge
+  into a single challenge-aware retention path.
+
+**Provider + webhook architecture (@swap/server)**
+- `EmailProvider` interface with `FakeEmailProvider` (tests), `DevEmailProvider`
+  (never sends), and `PostmarkEmailProvider` (inactive unless a token is
+  configured; timeout + transient/rejected normalization + idempotency key).
+  **No real email is sent and no real Postmark token is required.**
+- Webhook security: constant-time secret verification, HMAC-SHA256 helper,
+  64 KiB size limit, event-type allowlist, minimal-detail parsing. Replay is a
+  DB-enforced no-op.
+- `packages/server/src/otp.ts`: code generation, DB-matching hashing, the issue
+  orchestration (hash+salt only reach the DB), and the client verify wrapper with
+  typed error mapping.
+
+**Edge Functions (Deno)**
+- `supabase/functions/otp-request` — authenticated request path; reads the
+  caller's verified email; generates/hashes the code; calls the service-role RPC;
+  sends via provider; returns a **generic** response that never reveals roster /
+  membership / block existence (rate-limits → generic 429).
+- `supabase/functions/email-webhook` — authenticates first (constant-time secret),
+  size-limits, allowlists, then records via the service-role RPC.
+
+**Tests**
+- pgTAP `29_email_otp.sql` (now 38 assertions in-file) + retirement/purge proofs.
+- vitest: `otp.test.ts`, `email/provider.test.ts`, `email/webhook.test.ts`
+  (79 server unit tests total).
+- Concurrency scenario 6: two simultaneous final verifications — exactly one
+  succeeds, the challenge is consumed once, one membership created.
+- PostgREST integration (real API boundary): `membership.integration.mjs` (item A)
+  + `otp.integration.mjs`. The Storage-integration workflow is renamed **Integration**
+  and runs all three suites in one booted stack.
+- Full pgTAP suite: 218 assertions across 17 files.
+
+**Docs**: `docs/otp.md` (state diagram, rate rules, provider interface, webhook
+security model, privacy/retention), updated `school-verification.md`,
+`email-deliverability.md`, `database.md`, `privacy-data-retention.md`, `.env.example`.
+
+**Trust & Safety**: `docs/trust-and-safety-roadmap.md` records (does not implement)
+T&S as the mandatory next checkpoint before any content CRUD.
+
 ### Phase 1B checkpoint hardening — security review fixes (2026-07-24)
 
 Pre-approval hardening from a code-level security review. Still no Phase 1B.3+.

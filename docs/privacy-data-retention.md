@@ -33,14 +33,21 @@ personal information necessary and never expose it publicly.
 
 | Data | Retention | Mechanism |
 | --- | --- | --- |
-| OTP codes | expiry + 1 day grace | `app.purge_expired_ephemeral` |
-| Email delivery logs | 180 days | `app.purge_expired_ephemeral` |
+| OTP challenges (consumed / superseded / expired) | expiry + 1 day grace | `app.purge_expired_otp` (also run by `app.purge_expired_ephemeral`) |
+| Failed OTP attempts | held on the challenge row; deleted with it | `app.purge_expired_otp` |
+| Email delivery / bounce events | 180 days | `app.purge_expired_ephemeral` |
 | Invalid device tokens | pruned each run | `app.purge_expired_ephemeral` |
 | Abandoned drafts | 90 days | `app.purge_expired_ephemeral` |
 | Stale offers | 30 days → `expired` | `app.expire_stale_content` |
 | Unanswered membership requests | 60 days → `rejected` | `app.expire_stale_content` |
 | Expired invitations | rejected at redeem; row kept for audit | validated in `app.redeem_invitation` |
+| Roster entries (**optional** adapter; email only) | kept only while the school keeps roster enabled | school-deletable at any time (`student_roster_entries`); never real data in tests/seeds |
 | Transactions / reports / moderation / audit | **preserved** | never client-deletable |
+
+Roster matching is an optional adapter and is **off by default** (see
+[school-verification.md](school-verification.md)). Roster data is minimal (email
+only), never exposed to students, and a school may remove all imported roster
+data at any time.
 
 ## What is never hard-deleted via the client
 

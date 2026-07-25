@@ -1,11 +1,14 @@
-name: Storage Integration
+name: Integration
 
-# Real Supabase Storage integration test. Boots a DISPOSABLE local Supabase stack
-# on the GitHub runner (`supabase start`), applies all migrations from a clean
-# state, and runs the Storage authorization test against the real Storage service
-# and storage schema. No production project, no production secrets — the CLI mints
-# throwaway local keys. The fast policy-replica pgTAP tests (in ci.yml) remain the
-# unit-level check; this is the additional integration proof.
+# Real Supabase integration tests. Boots a DISPOSABLE local Supabase stack on the
+# GitHub runner (`supabase start`), applies all migrations from a clean state, and
+# runs the integration suites against the real PostgREST API, Auth, and Storage
+# services (and the storage/private schemas). No production project, no production
+# secrets — the CLI mints throwaway local keys. The fast pgTAP tests (in ci.yml)
+# remain the unit-level check; these are the additional round-trip proofs:
+#   * storage.integration.mjs    — Storage authorization (11 requirements)
+#   * membership.integration.mjs — membership RPCs over the PostgREST boundary
+#   * otp.integration.mjs        — Email OTP request/verify over PostgREST
 
 on:
   push:
@@ -14,11 +17,11 @@ on:
     branches: ["**"]
 
 concurrency:
-  group: storage-integration-${{ github.ref }}
+  group: integration-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  storage-integration:
+  integration:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -59,7 +62,7 @@ jobs:
           # Apply every migration from a clean state.
           supabase db reset --no-seed
 
-      - name: Run Storage integration test
+      - name: Run integration suites (Storage, membership, OTP)
         run: |
           set -euo pipefail
           supabase status -o json > /tmp/status.json
@@ -67,6 +70,8 @@ jobs:
           export SUPABASE_ANON_KEY="$(node -e "process.stdout.write(require('/tmp/status.json').ANON_KEY)")"
           export SUPABASE_SERVICE_ROLE_KEY="$(node -e "process.stdout.write(require('/tmp/status.json').SERVICE_ROLE_KEY)")"
           node supabase/tests/integration/storage.integration.mjs
+          node supabase/tests/integration/membership.integration.mjs
+          node supabase/tests/integration/otp.integration.mjs
 
       - name: Dump logs on failure
         if: failure()

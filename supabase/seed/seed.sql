@@ -52,9 +52,16 @@ begin
     (s_north, 'Northgate Preparatory (Demo)', 'northgate-demo', 'active'),
     (s_south, 'Southvale Academy (Demo)',     'southvale-demo', 'active');
 
-  insert into school_settings (school_id, enabled_categories) values
-    (s_north, array['textbooks','clothing','electronics','sports_equipment','other']),
-    (s_south, array['textbooks','clothing','electronics','other']);
+  -- Verification posture is per-school and opt-in. Northgate runs the default
+  -- pilot posture (invitation codes + manual approval) plus email OTP once
+  -- deliverability is confirmed — NO roster. Southvale additionally demonstrates
+  -- the OPTIONAL roster adapter, as if the school lawfully provided roster data.
+  -- (All roster data here is synthetic; real roster data never appears in seeds.)
+  insert into school_settings (school_id, enabled_verification_methods, enabled_categories) values
+    (s_north, array['invite_code','manual','email_otp']::verification_method[],
+              array['textbooks','clothing','electronics','sports_equipment','other']),
+    (s_south, array['invite_code','manual','roster']::verification_method[],
+              array['textbooks','clothing','electronics','other']);
 
   insert into school_domains (school_id, domain, verified) values
     (s_north, 'northgate.example.test', true),
