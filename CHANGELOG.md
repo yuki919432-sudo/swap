@@ -5,6 +5,46 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Phase 1C — Mobile vertical slice (Expo) (2026-07-25)
+
+A polished, user-facing mobile app you can open on an iPhone via Expo Go, running
+entirely on synthetic data in a development-only demo mode. Not a public launch: no
+real accounts/emails, no production credentials, no RLS bypass, no messaging/offers/
+payments, no production Trust & Safety backend.
+
+- **App**: `apps/mobile` — Expo SDK 52, Expo Router, TypeScript, wired into the pnpm
+  monorepo; reuses `@swap/types` (enums) and `@swap/validation` (`createListingSchema`).
+- **Demo mode**: gated by `EXPO_PUBLIC_ENABLE_DEMO_MODE=true` AND a dev runtime
+  (`__DEV__`) — hidden when disabled, unavailable in production builds, clearly
+  labeled. Synthetic cast: verified university student, verified HS student, pending
+  student, school moderator.
+- **Repository architecture**: `SessionRepository`, `MarketplaceRepository`,
+  `CommunityRepository`, `InboxRepository`, `SavedListingsRepository`,
+  `DraftListingsRepository` interfaces with Mock implementations; screens depend only
+  on interfaces (Supabase swap-in later needs no screen changes). Local persistence
+  via a `KeyValueStore` (AsyncStorage in-app, in-memory in tests) for selected
+  profile, saved listings, drafts, and locally-published demo listings.
+- **Design tokens**: centralized colors (light/dark), typography, spacing, radii,
+  shadows, icon sizes, motion — no scattered literal styles.
+- **Screens**: Welcome, demo school/profile selector, Home, Marketplace (search +
+  post-type/category/condition filters + sort + skeleton + empty + pull-to-refresh),
+  Listing details (carousel, save/share/report, coming-soon offers), Create (image
+  picker, shared validation, preview, save draft, publish-to-demo), My Listings
+  (Drafts/Active/Reserved/Completed/Expired + Saved), Community, Inbox (preview),
+  Profile, Settings.
+- **Local moderation simulator**: deterministic allow/warn/block/escalate; warned/
+  blocked/escalated stay unpublished; edit-and-retry; never auto-suspends. Regulated
+  categories (tobacco/nicotine/vaping/alcohol) kept SEPARATE from universal
+  prohibitions — off by default, never enable-able for high schools, future
+  university capability only.
+- **Tests**: 43 vitest logic tests (demo-mode gating, feed/filter/search, saving,
+  persistence, drafts, validation, publish outcomes for each moderation result,
+  edit-changes-outcome, no-real-data fixture scan). Existing suites unchanged and
+  green.
+- **Docs**: `apps/mobile/README.md` (Expo Go, demo mode, repo architecture,
+  persistence, placeholders, limitations, Supabase swap-in). Root scripts
+  `mobile:start|ios|android|test`.
+
 ### Correction — roster is an optional adapter, never a dependency (2026-07-24)
 
 Student roster access is optional (privacy / institutional / contractual /

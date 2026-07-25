@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "SWAP!",
+    "slug": "swap-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "swap",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#F7F8F5",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "test.example.swap.demo"
+    },
+    "android": {
+      "package": "test.example.swap.demo"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "SWAP! (demo) uses your photo library only to attach images to a local demo listing. Images never leave your device."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}
