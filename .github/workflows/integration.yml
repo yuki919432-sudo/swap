@@ -73,6 +73,14 @@ jobs:
           node supabase/tests/integration/membership.integration.mjs
           node supabase/tests/integration/otp.integration.mjs
 
+      - name: Run mobile marketplace integration (real Supabase repositories, two users)
+        run: |
+          set -euo pipefail
+          export SUPABASE_URL="$(node -e "process.stdout.write(require('/tmp/status.json').API_URL)")"
+          export SUPABASE_ANON_KEY="$(node -e "process.stdout.write(require('/tmp/status.json').ANON_KEY)")"
+          export SUPABASE_SERVICE_ROLE_KEY="$(node -e "process.stdout.write(require('/tmp/status.json').SERVICE_ROLE_KEY)")"
+          pnpm --filter @swap/mobile test:integration
+
       - name: Dump logs on failure
         if: failure()
         run: |

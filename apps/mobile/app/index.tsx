@@ -4,12 +4,14 @@ import { useRouter } from "expo-router";
 import { Screen, AppText, Button, DemoBanner, ComingSoonSheet } from "../src/components";
 import { useTheme } from "../src/theme";
 import { useSession } from "../src/session/SessionProvider";
+import { useAuth } from "../src/data/supabase/AuthProvider";
 import { isDemoModeEnabled } from "../src/config/demo";
 
 export default function WelcomeScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { session } = useSession();
+  const { configured } = useAuth();
   const demoEnabled = isDemoModeEnabled();
   const [joinSheet, setJoinSheet] = useState(false);
 
@@ -39,7 +41,12 @@ export default function WelcomeScreen() {
               onPress={() => router.replace("/(tabs)")}
             />
           ) : null}
-          <Button label="Join your school" variant={session ? "secondary" : "primary"} icon="school" onPress={() => setJoinSheet(true)} />
+          <Button
+            label="Join your school"
+            variant={session ? "secondary" : "primary"}
+            icon="school"
+            onPress={() => (configured ? router.push("/sign-in") : setJoinSheet(true))}
+          />
           {demoEnabled ? (
             <Button label="Explore the demo" variant="ghost" icon="flask" onPress={() => router.push("/demo-select")} />
           ) : (

@@ -11,24 +11,12 @@
  * retry. No account action is ever taken.
  */
 import { createListingSchema } from "@swap/validation";
-import type { ItemCondition, ListingPostType } from "@swap/types";
-import type { ImageRef, Listing, OwnerPreview } from "../domain/models";
-import type { MarketplaceRepository } from "../data/repositories/types";
+import type { Listing, OwnerPreview } from "../domain/models";
+import type { MarketplaceRepository, NewListing } from "../data/repositories/types";
 import { simulateModeration, type ModerationContext, type ModerationResult } from "../moderation/simulator";
-import { newId } from "../lib/id";
 
-export interface ListingFormInput {
-  schoolId: string;
-  postType: ListingPostType;
-  title: string;
-  description: string;
-  category: string;
-  condition: ItemCondition | null;
-  desiredItem: string | null;
-  images: ImageRef[];
-  handoffLocation: string | null;
-  expiresAt: string | null;
-}
+/** The create-listing form shape is exactly a NewListing. */
+export type ListingFormInput = NewListing;
 
 export interface ValidationResult {
   ok: boolean;
@@ -66,26 +54,6 @@ export function assessListing(input: ListingFormInput, context: ModerationContex
   return { validation, moderation, canPublish: validation.ok && moderation.publishable };
 }
 
-export function buildListingFromForm(input: ListingFormInput, owner: OwnerPreview): Listing {
-  return {
-    id: newId("listing"),
-    schoolId: input.schoolId,
-    postType: input.postType,
-    status: "active",
-    title: input.title.trim(),
-    description: input.description.trim(),
-    category: input.category,
-    condition: input.condition,
-    desiredItem: input.desiredItem?.trim() || null,
-    images: input.images.length ? input.images : [{ kind: "placeholder", value: "📦" }],
-    handoffLocation: input.handoffLocation?.trim() || null,
-    owner,
-    createdAt: new Date().toISOString(),
-    expiresAt: input.expiresAt,
-    demoLocal: true,
-  };
-}
-
 export interface PublishResult {
   published: boolean;
   assessment: ListingAssessment;
@@ -93,8 +61,10 @@ export interface PublishResult {
 }
 
 /**
- * Validate + moderate and, only on success, publish to the local demo feed.
- * Returns the assessment either way so the caller can show feedback.
+ * Validate + moderate and, only on success, create the listing through the
+ * repository (mock → local demo feed; Supabase → real backend + Storage). Returns
+ * the assessment either way so the caller can show feedback. Warned / blocked /
+ * escalated content is never created.
  */
 export async function publishListing(
   marketplace: MarketplaceRepository,
@@ -104,7 +74,6 @@ export async function publishListing(
 ): Promise<PublishResult> {
   const assessment = assessListing(input, context);
   if (!assessment.canPublish) return { published: false, assessment };
-  const listing = buildListingFromForm(input, owner);
-  await marketplace.publishDemoListing(listing);
+  const listing = await marketplace.createListing(input, owner);
   return { published: true, assessment, listing };
 }

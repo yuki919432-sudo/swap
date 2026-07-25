@@ -33,8 +33,12 @@ export default function ListingDetailScreen() {
     useCallback(() => {
       if (!id) return;
       (async () => {
-        setListing(await repos.marketplace.getById(id));
-        setSaved(await repos.saved.isSaved(id));
+        try {
+          setListing(await repos.marketplace.getById(id));
+          setSaved(await repos.saved.isSaved(id));
+        } catch {
+          setListing(null);
+        }
       })();
     }, [repos, id]),
   );
@@ -53,8 +57,13 @@ export default function ListingDetailScreen() {
   }
 
   const toggleSave = async () => {
-    const now = await repos.saved.toggle(listing.id);
-    setSaved(now);
+    // Optimistic: flip immediately, reconcile from the backend on failure.
+    setSaved((s) => !s);
+    try {
+      await repos.saved.toggle(listing.id);
+    } catch {
+      setSaved(await repos.saved.isSaved(listing.id));
+    }
   };
 
   const primaryLabel =

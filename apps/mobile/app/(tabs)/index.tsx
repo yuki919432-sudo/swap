@@ -25,9 +25,13 @@ export default function HomeScreen() {
     useCallback(() => {
       if (!schoolId) return;
       (async () => {
-        setListings(await repos.marketplace.list({ schoolId, sort: "recent" }));
-        setCommunity(await repos.community.list(schoolId));
-        setSavedIds(await repos.saved.list());
+        try {
+          setListings(await repos.marketplace.list({ schoolId, sort: "recent" }));
+          setCommunity(await repos.community.list(schoolId));
+          setSavedIds(await repos.saved.list());
+        } catch {
+          // Best-effort home; the Marketplace tab surfaces load errors + retry.
+        }
       })();
     }, [repos, schoolId]),
   );

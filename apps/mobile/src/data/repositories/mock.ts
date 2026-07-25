@@ -5,9 +5,10 @@
  * local persistence (JsonStore). Screens depend on the interfaces, so replacing
  * these with Supabase-backed implementations later requires no screen changes.
  */
-import type { CommunityItem, DemoSchool, InboxThread, Listing } from "../../domain/models";
+import type { CommunityItem, DemoSchool, InboxThread, Listing, OwnerPreview } from "../../domain/models";
 import { demoCommunity, demoInbox, demoListings, demoProfileById, demoProfilesForSchool, demoProfiles, demoSchoolById, demoSchools } from "../demo";
 import { JsonStore, StorageKeys, type KeyValueStore } from "../storage";
+import { newId } from "../../lib/id";
 import { applyMarketplaceQuery } from "./marketplaceQuery";
 import type {
   CommunityRepository,
@@ -16,6 +17,7 @@ import type {
   InboxRepository,
   MarketplaceQuery,
   MarketplaceRepository,
+  NewListing,
   Repositories,
   SavedListingsRepository,
   SessionRepository,
@@ -76,11 +78,34 @@ export class MockMarketplaceRepository implements MarketplaceRepository {
     const all = await this.allForSchool(schoolId);
     return [...new Set(all.map((l) => l.category))].sort();
   }
-  async publishDemoListing(listing: Listing): Promise<Listing> {
+  async createListing(input: NewListing, owner: OwnerPreview): Promise<Listing> {
+    const listing: Listing = {
+      id: newId("listing"),
+      schoolId: input.schoolId,
+      postType: input.postType,
+      status: "active",
+      title: input.title.trim(),
+      description: input.description.trim(),
+      category: input.category,
+      condition: input.condition,
+      desiredItem: input.desiredItem?.trim() || null,
+      images: input.images.length ? input.images : [{ kind: "placeholder", value: "📦" }],
+      handoffLocation: input.handoffLocation?.trim() || null,
+      owner,
+      createdAt: new Date().toISOString(),
+      expiresAt: input.expiresAt,
+      demoLocal: true,
+    };
     const published = await this.store.read<Listing[]>(StorageKeys.publishedDemoListings, []);
-    const next = [{ ...listing, demoLocal: true }, ...published.filter((l) => l.id !== listing.id)];
-    await this.store.write(StorageKeys.publishedDemoListings, next);
+    await this.store.write(StorageKeys.publishedDemoListings, [listing, ...published.filter((l) => l.id !== listing.id)]);
     return listing;
+  }
+  async deleteListing(id: string): Promise<void> {
+    const published = await this.store.read<Listing[]>(StorageKeys.publishedDemoListings, []);
+    await this.store.write(
+      StorageKeys.publishedDemoListings,
+      published.filter((l) => l.id !== id),
+    );
   }
 }
 

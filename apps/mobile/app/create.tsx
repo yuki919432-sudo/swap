@@ -60,6 +60,8 @@ export default function CreateListingScreen() {
   const [expiryDays, setExpiryDays] = useState<number | null>(null);
   const [preview, setPreview] = useState(false);
   const [publishedSheet, setPublishedSheet] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
 
   const inputStyle = {
     backgroundColor: theme.colors.surfaceMuted,
@@ -143,17 +145,25 @@ export default function CreateListingScreen() {
 
   const publish = async () => {
     if (!session) return;
-    // Persist the draft first so it always exists in My Listings.
-    await repos.drafts.save(toDraft());
-    const result = await publishListing(repos.marketplace, formInput, ownerFromSession(session), {
-      institutionType: session.school.institutionType,
-    });
-    if (result.published && result.listing) {
-      await repos.drafts.markPublished(id, result.listing.id);
-      setPublishedSheet(true);
+    setPublishing(true);
+    setPublishError(null);
+    try {
+      // Persist the draft first so it always exists in My Listings.
+      await repos.drafts.save(toDraft());
+      const result = await publishListing(repos.marketplace, formInput, ownerFromSession(session), {
+        institutionType: session.school.institutionType,
+      });
+      if (result.published && result.listing) {
+        await repos.drafts.markPublished(id, result.listing.id);
+        setPublishedSheet(true);
+      }
+      // If not published, the ModerationNotice below already explains why; the draft
+      // remains saved and the user can edit and retry.
+    } catch {
+      setPublishError("Couldn't publish just now. Please check your connection and try again.");
+    } finally {
+      setPublishing(false);
     }
-    // If not published, the ModerationNotice below already explains why; the draft
-    // remains saved and the user can edit and retry.
   };
 
   if (!session) return null;
@@ -183,9 +193,14 @@ export default function CreateListingScreen() {
             </AppText>
           ) : null}
           {assessment ? <ModerationNotice result={assessment.moderation} /> : null}
+          {publishError ? (
+            <AppText variant="callout" color="danger" style={{ marginTop: theme.spacing.xs }}>
+              {publishError}
+            </AppText>
+          ) : null}
           <View style={{ flexDirection: "row", gap: theme.spacing.md, marginTop: theme.spacing.md }}>
             <Button label="Keep editing" variant="ghost" onPress={() => setPreview(false)} />
-            <Button label="Publish" icon="rocket-outline" disabled={!assessment?.canPublish} onPress={publish} />
+            <Button label="Publish" icon="rocket-outline" loading={publishing} disabled={!assessment?.canPublish} onPress={publish} />
           </View>
         </View>
       ) : (
