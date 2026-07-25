@@ -1,0 +1,173 @@
+import { useCallback, useState } from "react";
+import { View, ScrollView, Dimensions } from "react-native";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
+import {
+  Screen,
+  AppText,
+  Badge,
+  Avatar,
+  Button,
+  IconButton,
+  ListingImage,
+  Divider,
+  ComingSoonSheet,
+} from "../../src/components";
+import { useTheme } from "../../src/theme";
+import { useRepositories } from "../../src/data/repositories";
+import type { Listing } from "../../src/domain/models";
+import { postTypeEmoji, postTypeLabel, conditionLabel, categoryLabel } from "../../src/lib/labels";
+import { timeAgo } from "../../src/lib/id";
+
+const { width } = Dimensions.get("window");
+
+export default function ListingDetailScreen() {
+  const theme = useTheme();
+  const router = useRouter();
+  const repos = useRepositories();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const [listing, setListing] = useState<Listing | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [sheet, setSheet] = useState<null | { title: string; message: string; emoji: string }>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!id) return;
+      (async () => {
+        setListing(await repos.marketplace.getById(id));
+        setSaved(await repos.saved.isSaved(id));
+      })();
+    }, [repos, id]),
+  );
+
+  if (!listing) {
+    return (
+      <Screen>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.md, marginTop: theme.spacing.sm }}>
+          <IconButton icon="arrow-back" accessibilityLabel="Back" onPress={() => router.back()} />
+        </View>
+        <AppText variant="body" color="textMuted" style={{ marginTop: theme.spacing.xxl }}>
+          This listing isn't available.
+        </AppText>
+      </Screen>
+    );
+  }
+
+  const toggleSave = async () => {
+    const now = await repos.saved.toggle(listing.id);
+    setSaved(now);
+  };
+
+  const primaryLabel =
+    listing.postType === "looking_for" ? "I have this" : listing.postType === "borrow" ? "I can lend this" : "Make an offer";
+
+  return (
+    <Screen scroll padded={false} edges={["top"]}>
+      {/* Image carousel */}
+      <View>
+        <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
+          {(listing.images.length ? listing.images : [undefined]).map((img, i) => (
+            <ListingImage key={i} image={img} height={300} radius={0} style={{ width }} />
+          ))}
+        </ScrollView>
+        <View style={{ position: "absolute", top: theme.spacing.md, left: theme.spacing.lg }}>
+          <IconButton icon="arrow-back" accessibilityLabel="Back" onPress={() => router.back()} />
+        </View>
+        <View style={{ position: "absolute", top: theme.spacing.md, right: theme.spacing.lg, flexDirection: "row", gap: theme.spacing.sm }}>
+          <IconButton
+            icon={saved ? "bookmark" : "bookmark-outline"}
+            tone={saved ? "accent" : "muted"}
+            accessibilityLabel={saved ? "Unsave" : "Save"}
+            onPress={toggleSave}
+          />
+          <IconButton
+            icon="share-outline"
+            accessibilityLabel="Share"
+            onPress={() => setSheet({ emoji: "📤", title: "Sharing is coming soon", message: "Sharing listings outside the app is part of a later milestone." })}
+          />
+        </View>
+      </View>
+
+      <View style={{ padding: theme.spacing.lg, gap: theme.spacing.sm }}>
+        <View style={{ flexDirection: "row", gap: theme.spacing.xs }}>
+          <Badge label={postTypeLabel[listing.postType]} tone="accent" emoji={postTypeEmoji[listing.postType]} />
+          {listing.condition ? <Badge label={conditionLabel[listing.condition]} tone="neutral" /> : null}
+          {listing.demoLocal ? <Badge label="Your demo post" tone="info" emoji="✨" /> : null}
+        </View>
+
+        <AppText variant="title1">{listing.title}</AppText>
+        <AppText variant="caption" color="textFaint">
+          {categoryLabel(listing.category)} · Posted {timeAgo(listing.createdAt)}
+        </AppText>
+
+        {listing.postType === "swap" && listing.desiredItem ? (
+          <View style={{ backgroundColor: theme.colors.accentSoft, borderRadius: theme.radii.md, padding: theme.spacing.md, marginTop: theme.spacing.xs }}>
+            <AppText variant="caption" color="accentOnSoft">
+              WANTS IN RETURN
+            </AppText>
+            <AppText variant="bodyStrong" color="accentOnSoft">
+              {listing.desiredItem}
+            </AppText>
+          </View>
+        ) : null}
+
+        <AppText variant="body" color="textMuted" style={{ marginTop: theme.spacing.sm }}>
+          {listing.description}
+        </AppText>
+
+        <Divider />
+
+        {/* Owner preview — no email, no PII */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.md }}>
+          <Avatar emoji={listing.owner.avatarEmoji} />
+          <View style={{ flex: 1 }}>
+            <AppText variant="bodyStrong">{listing.owner.displayName}</AppText>
+            <AppText variant="caption" color={listing.owner.verified ? "success" : "textFaint"}>
+              {listing.owner.verified ? "✓ Verified student" : "Pending verification"}
+            </AppText>
+          </View>
+        </View>
+
+        {listing.handoffLocation ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.sm, marginTop: theme.spacing.sm }}>
+            <AppText>📍</AppText>
+            <AppText variant="callout" color="textMuted">
+              Safe handoff: {listing.handoffLocation}
+            </AppText>
+          </View>
+        ) : null}
+
+        <Divider />
+
+        <View style={{ flexDirection: "row", gap: theme.spacing.md }}>
+          <IconButton
+            icon="flag-outline"
+            accessibilityLabel="Report listing"
+            tone="danger"
+            onPress={() => setSheet({ emoji: "🚩", title: "Reporting is coming soon", message: "Reporting routes to human review in a later milestone. Thanks for helping keep campus safe." })}
+          />
+          <View style={{ flex: 1 }}>
+            <Button
+              label={primaryLabel}
+              icon="chatbubble-ellipses-outline"
+              onPress={() =>
+                setSheet({
+                  emoji: "💬",
+                  title: "Messaging & offers are coming soon",
+                  message: "In the demo, we don't create real conversations or offers. Direct messaging and the offer/handoff flow arrive in a later milestone.",
+                })
+              }
+            />
+          </View>
+        </View>
+      </View>
+
+      <ComingSoonSheet
+        visible={sheet !== null}
+        onClose={() => setSheet(null)}
+        emoji={sheet?.emoji ?? "✨"}
+        title={sheet?.title ?? ""}
+        message={sheet?.message ?? ""}
+      />
+    </Screen>
+  );
+}

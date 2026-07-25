@@ -18,6 +18,11 @@ export default tseslint.config(
       // the DB test suites and CI directly, not by the TS linter.
       "scripts/**",
       "supabase/**",
+      // Expo/Metro/Babel config are CommonJS boilerplate run by the bundler,
+      // and .expo is generated. They are not app logic for the TS linter.
+      "**/babel.config.js",
+      "**/metro.config.js",
+      "**/.expo/**",
     ],
   },
   js.configs.recommended,

@@ -29,6 +29,10 @@
     "check:unicode": "node scripts/check-unicode.mjs",
     "db:gen-types": "bash scripts/gen-db-types.sh",
     "storage:integration": "node supabase/tests/integration/storage.integration.mjs",
+    "mobile:start": "pnpm --filter @swap/mobile start",
+    "mobile:ios": "pnpm --filter @swap/mobile ios",
+    "mobile:android": "pnpm --filter @swap/mobile android",
+    "mobile:test": "pnpm --filter @swap/mobile test",
     "verify": "bash scripts/verify.sh"
   },
   "devDependencies": {
