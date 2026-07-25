@@ -70,7 +70,9 @@ export class SupabaseMarketplaceRepository implements MarketplaceRepository {
     if (query.conditions?.length) q = q.in("condition", query.conditions);
     if (query.search) {
       const s = sanitize(query.search);
-      if (s) q = q.or(`title.ilike.%${s}%,description.ilike.%${s}%,category.ilike.%${s}%,desired_item.ilike.%${s}%`);
+      // NOTE: inside a PostgREST `.or(...)` expression, `ilike` wildcards are `*`
+      // (not the SQL `%`, which is only used by the single-column `.ilike()` helper).
+      if (s) q = q.or(`title.ilike.*${s}*,description.ilike.*${s}*,category.ilike.*${s}*,desired_item.ilike.*${s}*`);
     }
     const sort = query.sort ?? "recent";
     q = sort === "title" ? q.order("title", { ascending: true }) : q.order("created_at", { ascending: sort === "oldest" });
