@@ -62,6 +62,56 @@ change only `RepositoryProvider` — **no screen changes**. The marketplace quer
 semantics (search/filter/sort) live in the pure, tested
 `applyMarketplaceQuery()` so they carry over unchanged.
 
+## Real backend (Supabase)
+
+The same repository interfaces have **real Supabase-backed implementations**
+(`src/data/repositories/supabase/`). The data source is chosen in ONE place —
+`RepositoryProvider` — with **no screen changes**:
+
+- **Demo mode** (no Supabase env, or signed out): the Mock repositories.
+- **Real backend** (`EXPO_PUBLIC_SUPABASE_URL` + `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+  set **and** a signed-in user): the Supabase repositories.
+
+Everything runs under the caller's own session, so **Row-Level Security is the real
+authority** — a user only sees/writes what their verified school membership allows.
+
+| Capability | Implementation |
+| --- | --- |
+| Listing feed / search / filters / sort | `SupabaseMarketplaceRepository.list` → PostgREST (`ilike` search, `in` filters, `order`) |
+| Listing detail | `getById` with embedded images + owner |
+| Create listing | `createListing` → insert row + upload images to Storage (`listing-images/{school}/{listing}/…`) + record image rows |
+| Delete listing | `deleteListing` → soft-delete (`deleted_at`, status `removed`) |
+| Images | private bucket → served via **signed URLs** |
+| Saved listings | `SupabaseSavedListingsRepository` (user-scoped by RLS) |
+| Session | `SupabaseSessionRepository` reads the real user's profile + verified membership + school |
+
+**Sign in (dev/pilot):** with a backend configured, Welcome → *Join your school* →
+`sign-in` (real Supabase email+password auth — a genuine JWT, not fake auth). Student
+verification (invitation code / admin approval / email OTP) is the next auth milestone.
+
+**Optimistic UI + states:** saving flips instantly and reconciles on failure; the
+Marketplace shows a loading skeleton, an empty state, and a **retry** error state;
+publishing shows progress and a friendly error on failure.
+
+**Two-user acceptance proof:** `src/data/repositories/supabase/marketplace.integration.test.ts`
+boots a real Supabase stack in CI and exercises the actual repository classes — two
+same-school users create listings, upload images, browse, search, save, and view
+each other's items; a third user from another school is isolated by RLS.
+
+Run against a local stack: `pnpm mobile:test` is unit-only; the integration test runs
+via `pnpm --filter @swap/mobile test:integration` with `SUPABASE_URL` /
+`SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` from `supabase status`.
+
+### Real-backend limitations (this checkpoint)
+
+- Drafts stay **local** (on-device); publishing a draft creates a real listing.
+- Free-text handoff location isn't persisted (real handoff locations are a
+  predefined-list feature); `handoff_location_id` is left null.
+- Institution type isn't modeled in the DB yet; real schools default to
+  "university" for the local moderation context (regulated categories stay off).
+- Community / Inbox are stubs (empty) against the real backend until their
+  milestones. Moderation is still the **local simulator** (as requested).
+
 ## Local persistence
 
 Repositories persist through a tiny `KeyValueStore` (`src/data/storage.ts`):

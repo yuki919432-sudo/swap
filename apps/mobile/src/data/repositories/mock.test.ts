@@ -63,19 +63,32 @@ describe("MockMarketplaceRepository", () => {
     expect(one?.id).toBe(list[0]!.id);
   });
 
-  it("publishes a demo listing to the top of the feed and persists it", async () => {
+  it("creates a listing at the top of the feed and persists it", async () => {
     const kv = new InMemoryKeyValueStore();
     const repos = createMockRepositories(kv);
-    const listing = {
-      ...(await repos.marketplace.list({ schoolId: uniSchool.id }))[0]!,
-      id: "local-1",
-      title: "My local demo item",
-      demoLocal: false,
-    };
-    await repos.marketplace.publishDemoListing(listing);
+    const owner = { displayName: "Maya", avatarEmoji: "🌸", verified: true };
+    const created = await repos.marketplace.createListing(
+      {
+        schoolId: uniSchool.id,
+        postType: "give",
+        title: "My local demo item",
+        description: "A freshly created listing.",
+        category: "textbooks",
+        condition: "good",
+        desiredItem: null,
+        images: [],
+        handoffLocation: null,
+        expiresAt: null,
+      },
+      owner,
+    );
     const feed = await createMockRepositories(kv).marketplace.list({ schoolId: uniSchool.id });
-    expect(feed[0]?.id).toBe("local-1");
+    expect(feed[0]?.id).toBe(created.id);
     expect(feed[0]?.demoLocal).toBe(true);
+
+    await repos.marketplace.deleteListing(created.id);
+    const after = await createMockRepositories(kv).marketplace.list({ schoolId: uniSchool.id });
+    expect(after.find((l) => l.id === created.id)).toBeUndefined();
   });
 });
 

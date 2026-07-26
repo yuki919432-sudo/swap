@@ -46,6 +46,7 @@ export default function MarketplaceScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [error, setError] = useState(false);
 
   // Seed the post-type filter from a navigation param (e.g. tapped from Home).
   useEffect(() => {
@@ -55,18 +56,24 @@ export default function MarketplaceScreen() {
 
   const load = useCallback(async () => {
     if (!schoolId) return;
-    const result = await repos.marketplace.list({
-      schoolId,
-      search: search.trim() || undefined,
-      postTypes: postTypes.length ? postTypes : undefined,
-      categories: categories.length ? categories : undefined,
-      conditions: conditions.length ? conditions : undefined,
-      sort,
-    });
-    setListings(result);
-    setSavedIds(await repos.saved.list());
-    setAllCategories(await repos.marketplace.categoriesForSchool(schoolId));
-    setLoading(false);
+    try {
+      const result = await repos.marketplace.list({
+        schoolId,
+        search: search.trim() || undefined,
+        postTypes: postTypes.length ? postTypes : undefined,
+        categories: categories.length ? categories : undefined,
+        conditions: conditions.length ? conditions : undefined,
+        sort,
+      });
+      setListings(result);
+      setSavedIds(await repos.saved.list());
+      setAllCategories(await repos.marketplace.categoriesForSchool(schoolId));
+      setError(false);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
   }, [repos, schoolId, search, postTypes, categories, conditions, sort]);
 
   useEffect(() => {
@@ -91,8 +98,14 @@ export default function MarketplaceScreen() {
     list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
 
   const onToggleSave = async (id: string) => {
-    await repos.saved.toggle(id);
-    setSavedIds(await repos.saved.list());
+    // Optimistic: flip immediately, reconcile with the source of truth on failure.
+    const wasSaved = savedIds.includes(id);
+    setSavedIds((prev) => (wasSaved ? prev.filter((x) => x !== id) : [id, ...prev]));
+    try {
+      await repos.saved.toggle(id);
+    } catch {
+      setSavedIds(await repos.saved.list());
+    }
   };
 
   const activeFilterCount = categories.length + conditions.length + (sort !== "recent" ? 1 : 0);
@@ -144,6 +157,13 @@ export default function MarketplaceScreen() {
           <ListingCardSkeleton />
           <ListingCardSkeleton />
         </View>
+      ) : error ? (
+        <EmptyState
+          emoji="📶"
+          title="Couldn't load listings"
+          message="Something went wrong reaching the marketplace. Check your connection and try again."
+          action={<Button label="Retry" icon="refresh" fullWidth={false} onPress={() => { setLoading(true); load(); }} />}
+        />
       ) : listings.length === 0 ? (
         <EmptyState
           emoji="🧺"

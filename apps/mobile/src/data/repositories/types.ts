@@ -14,6 +14,7 @@ import type {
   InboxThread,
   ImageRef,
   Listing,
+  OwnerPreview,
 } from "../../domain/models";
 
 /* ------------------------------------------------------------------ session */
@@ -51,13 +52,29 @@ export interface MarketplaceQuery {
   includeDemoLocal?: boolean;
 }
 
+/** The fields needed to create a listing (owner + ids are resolved by the repo). */
+export interface NewListing {
+  schoolId: string;
+  postType: ListingPostType;
+  title: string;
+  description: string;
+  category: string;
+  condition: ItemCondition | null;
+  desiredItem: string | null;
+  images: ImageRef[];
+  handoffLocation: string | null;
+  expiresAt: string | null;
+}
+
 export interface MarketplaceRepository {
   list(query: MarketplaceQuery): Promise<Listing[]>;
   getById(id: string): Promise<Listing | null>;
   /** The distinct categories present for a school (for the filter UI). */
   categoriesForSchool(schoolId: string): Promise<string[]>;
-  /** Append a locally-published demo listing to the feed (persisted). */
-  publishDemoListing(listing: Listing): Promise<Listing>;
+  /** Create a listing (uploads any images) and return the created record. */
+  createListing(input: NewListing, owner: OwnerPreview): Promise<Listing>;
+  /** Soft-delete a listing the caller owns. */
+  deleteListing(id: string): Promise<void>;
 }
 
 /* ---------------------------------------------------------------- community */

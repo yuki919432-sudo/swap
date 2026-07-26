@@ -5,6 +5,45 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Phase 1D — Real Supabase-backed marketplace (2026-07-25)
+
+Replace the mobile mock marketplace repositories with real Supabase-backed
+implementations, making the app usable against the real backend. Repository
+abstraction unchanged; only the implementations were replaced — no screen rewrites.
+Out of scope (unchanged): full Trust & Safety backend, messaging, offers, payments,
+public deployment. The local moderation simulator is kept as-is.
+
+- **Supabase repositories** (`apps/mobile/src/data/repositories/supabase/`): real
+  listing CRUD (create/soft-delete), feed, detail, search (`ilike`), post-type /
+  category / condition filters, sort — all under RLS via the caller's own session.
+  `SavedListingsRepository` (user-scoped) and `SessionRepository` (real profile +
+  verified membership + school) too.
+- **Storage image upload**: picked images upload to the private `listing-images`
+  bucket under `{school_id}/{listing_id}/…` and are served via **signed URLs**.
+- **Data-source selection**: `RepositoryProvider` uses the Supabase repos when a
+  backend is configured (`EXPO_PUBLIC_SUPABASE_URL` + `EXPO_PUBLIC_SUPABASE_ANON_KEY`)
+  and a user is signed in; otherwise the demo Mock repos. New `AuthProvider`
+  (Supabase auth) + a dev/pilot email+password `sign-in` screen (real JWT, not fake
+  auth). The demo banner hides itself against the real backend.
+- **Optimistic UI + states**: instant save toggle with reconcile-on-failure; loading
+  skeleton, empty state, and a retry error state in Marketplace; publish progress +
+  error handling.
+- **Two-user acceptance proof**: `marketplace.integration.test.ts` boots a real
+  Supabase stack in CI and drives the ACTUAL repository classes — two same-school
+  users create listings, upload images, browse, search, save, and view each other's
+  items; a third user from another school is isolated by RLS. Wired into the
+  Integration workflow (`pnpm --filter @swap/mobile test:integration`).
+- **Tests**: 52 mobile unit tests (mappers + fake-client repo coverage + existing
+  logic) and the real-backend integration suite. Existing pgTAP / OTP / membership /
+  storage / server suites unchanged and green.
+- **Docs**: `apps/mobile/README.md` real-backend section + limitations;
+  `apps/mobile/.env.example` gains the Supabase URL/anon-key vars.
+
+**Known limitations**: drafts stay local (publish creates a real listing); free-text
+handoff not persisted (predefined-list feature); institution type not yet modeled
+(defaults to "university" for the moderation context); Community/Inbox are empty
+stubs against the real backend; moderation remains the local simulator.
+
 ### Phase 1C — Mobile vertical slice (Expo) (2026-07-25)
 
 A polished, user-facing mobile app you can open on an iPhone via Expo Go, running

@@ -1,11 +1,15 @@
 import { View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../theme";
+import { useIsRealBackend } from "../data/repositories";
 import { AppText } from "./Text";
 
-/** A persistent, unmistakable label that the app is running in demo mode. */
+/** A persistent, unmistakable label that the app is running in demo mode. Renders
+ * nothing when talking to the real backend, so it never mislabels real data. */
 export function DemoBanner({ compact = false }: { compact?: boolean }) {
   const theme = useTheme();
+  const realBackend = useIsRealBackend();
+  if (realBackend) return null;
   return (
     <View
       style={{
