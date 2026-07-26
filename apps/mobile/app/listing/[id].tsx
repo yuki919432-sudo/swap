@@ -11,12 +11,17 @@ import {
   ListingImage,
   Divider,
   ComingSoonSheet,
+  ShelfRail,
 } from "../../src/components";
 import { useTheme } from "../../src/theme";
 import { useRepositories } from "../../src/data/repositories";
 import type { Listing } from "../../src/domain/models";
 import { postTypeEmoji, postTypeLabel, conditionLabel, categoryLabel } from "../../src/lib/labels";
 import { timeAgo } from "../../src/lib/id";
+import { DeterministicRecommendationEngine, recordBrowsedCategory } from "../../src/recommendations";
+import { asyncStorageKeyValueStore } from "../../src/data/asyncStorage";
+
+const engine = new DeterministicRecommendationEngine();
 
 const { width } = Dimensions.get("window");
 
@@ -27,6 +32,7 @@ export default function ListingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [listing, setListing] = useState<Listing | null>(null);
   const [saved, setSaved] = useState(false);
+  const [similar, setSimilar] = useState<Listing[]>([]);
   const [sheet, setSheet] = useState<null | { title: string; message: string; emoji: string }>(null);
 
   useFocusEffect(
@@ -34,8 +40,15 @@ export default function ListingDetailScreen() {
       if (!id) return;
       (async () => {
         try {
-          setListing(await repos.marketplace.getById(id));
+          const got = await repos.marketplace.getById(id);
+          setListing(got);
           setSaved(await repos.saved.isSaved(id));
+          if (got) {
+            // Record the browsed category (a recommendation signal) + find similar.
+            await recordBrowsedCategory(asyncStorageKeyValueStore, got.category);
+            const pool = await repos.marketplace.list({ schoolId: got.schoolId });
+            setSimilar(engine.similarTo(got, pool, 10));
+          }
         } catch {
           setListing(null);
         }
@@ -168,6 +181,8 @@ export default function ListingDetailScreen() {
             />
           </View>
         </View>
+
+        <ShelfRail title="Similar listings" listings={similar} onOpen={(sid) => router.push(`/listing/${sid}`)} />
       </View>
 
       <ComingSoonSheet

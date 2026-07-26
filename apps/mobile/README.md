@@ -112,6 +112,35 @@ via `pnpm --filter @swap/mobile test:integration` with `SUPABASE_URL` /
 - Community / Inbox are stubs (empty) against the real backend until their
   milestones. Moderation is still the **local simulator** (as requested).
 
+## Wishlist & recommendations
+
+Two distinct concepts:
+
+- **Saved listings** — a bookmark on an existing listing (Phase 1D).
+- **Wishlist ("looking for")** — persistent "I'm looking for…" requests
+  (`WishlistRepository`, backed by the `wishlist_items` table): title, description,
+  preferred category/condition, budget (future), swap-acceptable, urgency, and
+  school visibility. Wishes surface throughout the app (Home entry, "around campus",
+  student stalls).
+
+**Match outbox + notification hook (prepared, not sent).** A database trigger runs
+a deterministic matcher on every new listing and records `(wishlist → listing,
+score)` rows into `wishlist_matches` with an `notified_at` outbox column. A future
+push-notification service ("A new item matching your wishlist has been listed.")
+implements `WishlistNotifier` and marks rows notified — `NoopWishlistNotifier` is
+the current no-op. No push notifications are sent in this phase.
+
+**Recommendation engine** (`src/recommendations/`) — modular and replaceable:
+screens depend on the `RecommendationEngine` interface, not the implementation. The
+`DeterministicRecommendationEngine` builds labeled shelves — *Recommended for you*,
+*Because you liked…*, *Matches your wishlist*, *Popular in your school*, *Trending
+this week*, *New in categories you browse* — plus per-listing *Similar listings*.
+Pure, deterministic scoring (token overlap + category/condition + a popularity
+signal); **no external AI/ML**. Browsing history (viewed categories) is a local
+signal. The authoritative wishlist match outbox is computed server-side; the client
+engine powers the broader shelves and can be swapped for a smarter/served ranker
+later without touching the UI.
+
 ## Local persistence
 
 Repositories persist through a tiny `KeyValueStore` (`src/data/storage.ts`):

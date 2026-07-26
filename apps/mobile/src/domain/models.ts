@@ -13,6 +13,9 @@ import type {
   ListingStatus,
   MembershipStatus,
   VerificationMethod,
+  WishlistStatus,
+  WishlistUrgency,
+  WishlistVisibility,
 } from "@swap/types";
 
 export type InstitutionType = "high_school" | "university";
@@ -88,6 +91,32 @@ export interface CommunityItem {
   when: string | null;
   location: string | null;
   createdAt: string;
+}
+
+/** A persistent "I'm looking for…" request (distinct from a saved bookmark). */
+export interface WishlistItem {
+  id: string;
+  schoolId: string;
+  userId: string;
+  title: string;
+  description: string | null;
+  preferredCategory: string | null;
+  preferredCondition: ItemCondition | null;
+  budgetCents: number | null;
+  swapAcceptable: boolean;
+  urgency: WishlistUrgency;
+  visibility: WishlistVisibility;
+  status: WishlistStatus;
+  createdAt: string;
+}
+
+/** A (wishlist → matching listing) hit from the server-side match outbox. */
+export interface WishlistMatch {
+  wishlistItemId: string;
+  listingId: string;
+  score: number;
+  createdAt: string;
+  notified: boolean;
 }
 
 export interface InboxThread {

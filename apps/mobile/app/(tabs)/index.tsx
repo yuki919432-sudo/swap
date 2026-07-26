@@ -1,14 +1,18 @@
 import { useCallback, useState } from "react";
 import { View, ScrollView, Pressable } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
-import { Screen, AppText, Card, DemoBanner, ListingImage, SectionHeader, Avatar } from "../../src/components";
+import { Screen, AppText, Card, DemoBanner, ListingImage, SectionHeader, Avatar, ShelfRail } from "../../src/components";
 import { useTheme } from "../../src/theme";
 import { useRepositories } from "../../src/data/repositories";
 import { useSession } from "../../src/session/SessionProvider";
-import type { Listing, CommunityItem } from "../../src/domain/models";
+import type { Listing, CommunityItem, WishlistItem } from "../../src/domain/models";
 import { LISTING_POST_TYPE } from "@swap/types";
 import { postTypeEmoji, postTypeLabel, communityTypeEmoji, categoryLabel } from "../../src/lib/labels";
 import { timeAgo } from "../../src/lib/id";
+import { DeterministicRecommendationEngine, getBrowsedCategories, type RecommendationShelf } from "../../src/recommendations";
+import { asyncStorageKeyValueStore } from "../../src/data/asyncStorage";
+
+const engine = new DeterministicRecommendationEngine();
 
 export default function HomeScreen() {
   const theme = useTheme();
@@ -18,22 +22,38 @@ export default function HomeScreen() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [community, setCommunity] = useState<CommunityItem[]>([]);
   const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [shelves, setShelves] = useState<RecommendationShelf[]>([]);
 
   const schoolId = session?.school.id;
 
   useFocusEffect(
     useCallback(() => {
-      if (!schoolId) return;
+      if (!schoolId || !session) return;
       (async () => {
         try {
-          setListings(await repos.marketplace.list({ schoolId, sort: "recent" }));
+          const feed = await repos.marketplace.list({ schoolId, sort: "recent" });
+          const saved = await repos.saved.list();
+          const wishlist: WishlistItem[] = await repos.wishlist.listMine();
+          const browsedCategories = await getBrowsedCategories(asyncStorageKeyValueStore);
+          setListings(feed);
           setCommunity(await repos.community.list(schoolId));
-          setSavedIds(await repos.saved.list());
+          setSavedIds(saved);
+          setShelves(
+            engine.buildShelves({
+              currentUserId: session.profile.id,
+              schoolId,
+              listings: feed,
+              wishlist,
+              savedIds: saved,
+              browsedCategories,
+              limit: 10,
+            }),
+          );
         } catch {
           // Best-effort home; the Marketplace tab surfaces load errors + retry.
         }
       })();
-    }, [repos, schoolId]),
+    }, [repos, schoolId, session]),
   );
 
   if (!session) return null;
@@ -106,6 +126,31 @@ export default function HomeScreen() {
           </Pressable>
         ))}
       </View>
+
+      {/* Wishlist entry */}
+      <Card onPress={() => router.push("/wishlist")} elevation="none" style={{ marginTop: theme.spacing.lg }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.md }}>
+          <AppText style={{ fontSize: 24 }}>🔎</AppText>
+          <View style={{ flex: 1 }}>
+            <AppText variant="bodyStrong">Your wishlist</AppText>
+            <AppText variant="caption" color="textMuted">
+              Tell us what you're looking for — we'll match new listings.
+            </AppText>
+          </View>
+          <AppText color="textFaint">›</AppText>
+        </View>
+      </Card>
+
+      {/* Deterministic recommendation shelves */}
+      {shelves.map((sh) => (
+        <ShelfRail
+          key={sh.kind}
+          title={sh.title}
+          subtitle={sh.subtitle}
+          listings={sh.listings}
+          onOpen={(id) => router.push(`/listing/${id}`)}
+        />
+      ))}
 
       {/* Recently added */}
       <SectionHeader title="Recently added" actionLabel="See all" onAction={() => router.push("/(tabs)/marketplace")} />

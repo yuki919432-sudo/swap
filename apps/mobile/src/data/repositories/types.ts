@@ -6,7 +6,7 @@
  * build can wire Supabase-backed implementations of the SAME interfaces without
  * touching a single screen.
  */
-import type { ItemCondition, ListingPostType, ListingStatus } from "@swap/types";
+import type { ItemCondition, ListingPostType, ListingStatus, WishlistStatus, WishlistUrgency, WishlistVisibility } from "@swap/types";
 import type {
   CommunityItem,
   DemoProfile,
@@ -15,6 +15,8 @@ import type {
   ImageRef,
   Listing,
   OwnerPreview,
+  WishlistItem,
+  WishlistMatch,
 } from "../../domain/models";
 
 /* ------------------------------------------------------------------ session */
@@ -126,6 +128,34 @@ export interface DraftListingsRepository {
   markPublished(id: string, listingId: string): Promise<void>;
 }
 
+/* ---------------------------------------------------------------- wishlist */
+
+/** The fields needed to create a wishlist item (ids/owner resolved by the repo). */
+export interface NewWishlistItem {
+  schoolId: string;
+  title: string;
+  description: string | null;
+  preferredCategory: string | null;
+  preferredCondition: ItemCondition | null;
+  budgetCents: number | null;
+  swapAcceptable: boolean;
+  urgency: WishlistUrgency;
+  visibility: WishlistVisibility;
+}
+
+export interface WishlistRepository {
+  /** The caller's own wishlist items (any status). */
+  listMine(): Promise<WishlistItem[]>;
+  /** Active wishlist items across the school (surface throughout the product). */
+  listForSchool(schoolId: string): Promise<WishlistItem[]>;
+  create(input: NewWishlistItem): Promise<WishlistItem>;
+  updateStatus(id: string, status: WishlistStatus): Promise<void>;
+  /** Soft-delete (cancel + hide) a wishlist item the caller owns. */
+  remove(id: string): Promise<void>;
+  /** The caller's match outbox: listings the backend matched to their wishlist. */
+  matchesForMe(): Promise<WishlistMatch[]>;
+}
+
 /* ------------------------------------------------------------- aggregate DI */
 
 export interface Repositories {
@@ -135,4 +165,5 @@ export interface Repositories {
   inbox: InboxRepository;
   saved: SavedListingsRepository;
   drafts: DraftListingsRepository;
+  wishlist: WishlistRepository;
 }

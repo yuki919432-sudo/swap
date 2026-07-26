@@ -3,3 +3,4 @@ export { demoProfiles, demoProfileById, demoProfilesForSchool } from "./profiles
 export { demoListings } from "./listings";
 export { demoCommunity } from "./community";
 export { demoInbox } from "./inbox";
+export { demoWishlist } from "./wishlist";

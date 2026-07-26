@@ -13,6 +13,7 @@ import { SupabaseMarketplaceRepository, type ImageReader } from "./marketplace";
 import { SupabaseSavedListingsRepository } from "./saved";
 import { SupabaseSessionRepository } from "./session";
 import { SupabaseCommunityRepository, SupabaseInboxRepository } from "./community";
+import { SupabaseWishlistRepository } from "./wishlist";
 
 export function createSupabaseRepositories(
   client: SupabaseClient,
@@ -27,8 +28,9 @@ export function createSupabaseRepositories(
     inbox: new SupabaseInboxRepository(),
     saved: new SupabaseSavedListingsRepository(client),
     drafts: new MockDraftListingsRepository(store),
+    wishlist: new SupabaseWishlistRepository(client),
   };
 }
 
-export { SupabaseMarketplaceRepository, SupabaseSavedListingsRepository, SupabaseSessionRepository };
+export { SupabaseMarketplaceRepository, SupabaseSavedListingsRepository, SupabaseSessionRepository, SupabaseWishlistRepository };
 export type { ImageReader };

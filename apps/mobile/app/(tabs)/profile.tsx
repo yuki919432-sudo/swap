@@ -36,12 +36,18 @@ export default function ProfileScreen() {
   const { session } = useSession();
   const [savedCount, setSavedCount] = useState(0);
   const [draftCount, setDraftCount] = useState(0);
+  const [wishCount, setWishCount] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
       (async () => {
         setSavedCount((await repos.saved.list()).length);
         setDraftCount((await repos.drafts.list()).length);
+        try {
+          setWishCount((await repos.wishlist.listMine()).length);
+        } catch {
+          setWishCount(0);
+        }
       })();
     }, [repos]),
   );
@@ -94,6 +100,7 @@ export default function ProfileScreen() {
       </Card>
 
       <Divider />
+      <Row icon="search-outline" label="My wishlist" value={String(wishCount)} onPress={() => router.push("/wishlist")} />
       <Row icon="bookmark-outline" label="Saved listings" value={String(savedCount)} onPress={() => router.push("/my-listings")} />
       <Row icon="pricetags-outline" label="My listings" value={String(draftCount)} onPress={() => router.push("/my-listings")} />
       <Row icon="settings-outline" label="Settings" onPress={() => router.push("/settings")} />

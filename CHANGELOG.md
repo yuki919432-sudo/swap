@@ -5,6 +5,46 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Phase 1E — Wishlist & discovery (2026-07-26)
+
+A first-class Wishlist ("looking for") system distinct from saved bookmarks, plus a
+modular deterministic recommendation engine. No external AI/ML; no push
+notifications (the notification data model + hook are prepared, not sent).
+
+**Backend (migration 0028)**
+- `wishlist_items` — persistent, school-scoped "looking for" requests (title,
+  description, preferred category/condition, budget [future], swap-acceptable,
+  urgency, visibility, status). Soft-deleted; RLS: owner CRUD, same-school verified
+  members read active items; prohibited preferred categories rejected.
+- `wishlist_matches` — a match **outbox**: an AFTER-INSERT trigger on listings runs
+  a deterministic matcher (`app.match_listing_to_wishlists`, pg_trgm title
+  similarity + category + condition + swap compatibility, threshold 0.25) and
+  records `(wishlist → listing, score)` rows with a `notified_at` outbox column for
+  a FUTURE "matching item listed" notification. RLS: only the wishlist owner reads
+  their matches.
+- New enums `wishlist_urgency` / `wishlist_status` / `wishlist_visibility` (TS +
+  DB, enum-parity enforced). pgTAP `32_wishlist.sql` (RLS + matcher: match on a
+  related listing, no match on an unrelated one or the wisher's own, owner-only
+  outbox visibility).
+
+**Mobile**
+- `WishlistRepository` (Mock + Supabase) behind the existing abstraction; domain
+  `WishlistItem` / `WishlistMatch`; `createWishlistItemSchema` in `@swap/validation`.
+- Modular `RecommendationEngine` (interface) + `DeterministicRecommendationEngine`:
+  shelves for recommended / because-you-liked / matches-your-wishlist / popular /
+  trending / new-in-categories, plus per-listing similar listings. Browsing-history
+  signal; `WishlistNotifier` + `NoopWishlistNotifier` (prepared, no push).
+- UI: Wishlist screen (create + my wishlist + campus wishes), recommendation
+  shelves on Home, "Similar listings" on the listing detail, wishlist entry on
+  Profile.
+
+**Tests**
+- +21 mobile unit tests (scoring, engine shelves + determinism, notifier, mock
+  wishlist repo) → 73 mobile unit tests. Real-backend integration
+  `wishlist.integration.test.ts` (two users: create wishlist, matching listing
+  populates the outbox via the trigger, owner-only visibility, self-listing
+  excluded). Full pgTAP suite now 234 assertions; enum parity 30/30.
+
 ### Phase 1D — Real Supabase-backed marketplace (2026-07-25)
 
 Replace the mobile mock marketplace repositories with real Supabase-backed

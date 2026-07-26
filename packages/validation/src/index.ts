@@ -11,6 +11,9 @@ import {
   REPORT_TARGET_TYPE,
   REPORT_REASON,
   PROHIBITED_CATEGORIES,
+  WISHLIST_URGENCY,
+  WISHLIST_STATUS,
+  WISHLIST_VISIBILITY,
 } from "@swap/types";
 import { uuid, shortText, mediumText, longText, email, timezone, gradYear, isoDateTime } from "./primitives.js";
 
@@ -197,6 +200,27 @@ export const reportSchema = z.object({
 export type ReportInput = z.infer<typeof reportSchema>;
 
 export const blockUserSchema = z.object({ blockedId: uuid });
+
+/* ---------------------------------------------------------------- Wishlist */
+
+/** Create a persistent "looking for" request (distinct from a saved bookmark). */
+export const createWishlistItemSchema = z.object({
+  schoolId: uuid,
+  title: shortText,
+  description: mediumText.nullable().optional(),
+  preferredCategory: category.nullable().optional(),
+  preferredCondition: zEnum(ITEM_CONDITION).nullable().optional(),
+  budgetCents: z.number().int().nonnegative().max(100_000_000).nullable().optional(),
+  swapAcceptable: z.boolean().default(true),
+  urgency: zEnum(WISHLIST_URGENCY).default("normal"),
+  visibility: zEnum(WISHLIST_VISIBILITY).default("school"),
+});
+export type CreateWishlistItemInput = z.infer<typeof createWishlistItemSchema>;
+
+export const updateWishlistItemSchema = createWishlistItemSchema.partial().extend({
+  status: zEnum(WISHLIST_STATUS).optional(),
+});
+export type UpdateWishlistItemInput = z.infer<typeof updateWishlistItemSchema>;
 
 /* --------------------------------------------------------- School admin ops */
 

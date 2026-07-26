@@ -12,3 +12,5 @@ export { DemoBanner } from "./DemoBanner";
 export { Sheet, ComingSoonSheet } from "./Sheet";
 export { SectionHeader, EmptyState, Skeleton, ListingCardSkeleton, IconButton, Divider } from "./misc";
 export { ModerationNotice } from "./ModerationNotice";
+export { ShelfRail } from "./ShelfRail";
+export { WishlistCard } from "./WishlistCard";
