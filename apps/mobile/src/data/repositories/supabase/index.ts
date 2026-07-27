@@ -14,6 +14,9 @@ import { SupabaseSavedListingsRepository } from "./saved";
 import { SupabaseSessionRepository } from "./session";
 import { SupabaseCommunityRepository, SupabaseInboxRepository } from "./community";
 import { SupabaseWishlistRepository } from "./wishlist";
+import { SupabaseStallRepository } from "./stall";
+import { SupabaseMarketRepository } from "./market";
+import { SupabaseCampusMarketRepository } from "./campusMarket";
 
 export function createSupabaseRepositories(
   client: SupabaseClient,
@@ -21,6 +24,7 @@ export function createSupabaseRepositories(
   opts?: { imageReader?: ImageReader },
 ): Repositories {
   const store = new JsonStore(kv);
+  const stalls = new SupabaseStallRepository(client);
   return {
     session: new SupabaseSessionRepository(client),
     marketplace: new SupabaseMarketplaceRepository(client, opts),
@@ -29,8 +33,19 @@ export function createSupabaseRepositories(
     saved: new SupabaseSavedListingsRepository(client),
     drafts: new MockDraftListingsRepository(store),
     wishlist: new SupabaseWishlistRepository(client),
+    stalls,
+    markets: new SupabaseMarketRepository(client),
+    campusMarket: new SupabaseCampusMarketRepository(client, stalls),
   };
 }
 
-export { SupabaseMarketplaceRepository, SupabaseSavedListingsRepository, SupabaseSessionRepository, SupabaseWishlistRepository };
+export {
+  SupabaseMarketplaceRepository,
+  SupabaseSavedListingsRepository,
+  SupabaseSessionRepository,
+  SupabaseWishlistRepository,
+  SupabaseStallRepository,
+  SupabaseMarketRepository,
+  SupabaseCampusMarketRepository,
+};
 export type { ImageReader };

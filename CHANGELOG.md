@@ -5,6 +5,75 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Phase 1F — Campus Markets & Student Stalls (2026-07-27)
+
+A year-round student flea-market district inside each school: an always-open,
+discovery-first **Campus Market** (derived from the school scope, no popularity
+analytics), lightweight **Student Stalls**, and themed, time-boxed **Temporary
+Markets**. Wishlist demand is woven throughout. No payments, messaging, offers,
+push notifications, external AI moderation, or T&S backend.
+
+**Backend (migration 0029)**
+- `stalls` — one casual stall per verified student per school (`unique(school_id,
+  user_id)`, optional ≤500-char description, soft-deleted, `updated_at` trigger).
+  RLS: same-school members + staff/platform read; a verified member inserts only
+  their own; owner updates their own.
+- `markets` — temporary markets (host, host label, title, description, cover path,
+  start/end, optional location + handoff instructions, allowed categories,
+  `allows_regulated`, status). Soft-deleted; `check(ends_at >= starts_at)`. A
+  trigger rejects prohibited categories in `allowed_categories` (a market can never
+  be a side door). A SECURITY DEFINER audit trigger writes `market_created` /
+  `market_cancelled`. RLS insert requires `app.can_create_market(school)` and pins
+  `host_user_id = auth.uid()`; a `WITH CHECK` keeps the host fixed so a moderator
+  editing a market can never silently become the owner.
+- `market_sellers` / `market_listings` — seller participation and listing↔market
+  associations (`unique` per pair, `added_by`). RLS: same-school read; a member
+  joins only as themselves and only while a market is upcoming/active; a member
+  associates only a listing they own, in the same school, while the market is
+  upcoming/active. Removing an association never deletes the listing; cancelling or
+  ending a market never deletes listings or associations.
+- New enums `market_status` (upcoming/active/ended/cancelled) and
+  `market_creation_policy` (verified_students/clubs_only/moderators_only), plus a
+  per-school `school_settings.market_creation_policy` (default `verified_students`)
+  and a `wishlist_items.show_on_stall` opt-in. `app.can_create_market` added to the
+  function-privilege allowlist. TS + DB enum parity (32/32).
+- pgTAP `33_campus_markets.sql`: cross-school isolation (markets/stalls/sellers/
+  associations all invisible to another school), stall create own/blocked-for-
+  others/blocked-for-pending, market create by a verified student, prohibited
+  category rejected, pending blocked, `moderators_only` blocks a plain student,
+  join + add-own-listing, cannot-add-unowned, a listing in two markets, remove ≠
+  delete, cancel ≠ delete (+ audited), create audited.
+
+**Mobile**
+- `StallRepository`, `MarketRepository`, `CampusMarketRepository` (Mock + Supabase)
+  behind the existing abstraction; domain `Stall` / `StallDetail` / `Market` /
+  `MarketDetail`; `MarketplaceRepository.listMine` for "add to market" pickers;
+  `WishlistRepository.setShowOnStall`. Schemas `upsertStallSchema` /
+  `createMarketSchema` / `addListingToMarketSchema` / `joinMarketSchema` in
+  `@swap/validation`.
+- `buildDiscoveryShelves` / `buildDemandClusters` — pure, deterministic Campus
+  Market builders shared by both data sources. Shelves (New Today, Matches Your
+  Wishlist, Free Stuff, Trending on Campus, Ending Soon, Textbooks, Dorm
+  Essentials, Fashion and Sneakers, Unexpected Finds) each carry a **supported
+  signal** (recency / wishlist / category / free / ending) — never an invented
+  popularity or view count. "Students Are Looking For" reports **privacy-safe**
+  demand clusters (distinct-student counts only, no names or ids).
+- `createMarket` flow: shared validation + the local moderation simulator over the
+  market text **and every allowed category**, keeping the strictest verdict, so
+  prohibited/regulated categories can't be enabled via a market (HS can never
+  enable regulated).
+- Screens: Campus Market home, Browse Stalls, Stall detail, My Stall (low-friction
+  open/edit + per-request stall visibility), Temporary Markets directory, Market
+  detail (join/leave, add existing listing, create-for-market, remove own listing,
+  host end/cancel), Create Market (moderated), Add-to-market picker with
+  fits-this-market / in-demand suggestions. Home gains a Campus Market entry.
+- Demo data (stalls, markets, seller participation, associations) — all synthetic,
+  no real data. Tests: `campusDiscovery` (shelves + privacy-safe demand),
+  `campusMarkets.mock` (My-Stall-only-owner-content, wishlist visibility, listing
+  in multiple markets, remove/cancel ≠ delete, join/leave), `createMarket`
+  (validation + moderation gates), and a real-backend integration proof
+  (`campusMarkets.integration`) driving three real users across two schools.
+
 ### Phase 1E — Wishlist & discovery (2026-07-26)
 
 A first-class Wishlist ("looking for") system distinct from saved bookmarks, plus a

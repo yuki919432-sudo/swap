@@ -6,7 +6,7 @@
  * build can wire Supabase-backed implementations of the SAME interfaces without
  * touching a single screen.
  */
-import type { ItemCondition, ListingPostType, ListingStatus, WishlistStatus, WishlistUrgency, WishlistVisibility } from "@swap/types";
+import type { ItemCondition, ListingPostType, ListingStatus, MarketStatus, WishlistStatus, WishlistUrgency, WishlistVisibility } from "@swap/types";
 import type {
   CommunityItem,
   DemoProfile,
@@ -14,7 +14,11 @@ import type {
   InboxThread,
   ImageRef,
   Listing,
+  Market,
+  MarketDetail,
   OwnerPreview,
+  Stall,
+  StallDetail,
   WishlistItem,
   WishlistMatch,
 } from "../../domain/models";
@@ -70,6 +74,8 @@ export interface NewListing {
 
 export interface MarketplaceRepository {
   list(query: MarketplaceQuery): Promise<Listing[]>;
+  /** The caller's own active listings in a school (for pickers like "add to market"). */
+  listMine(schoolId: string): Promise<Listing[]>;
   getById(id: string): Promise<Listing | null>;
   /** The distinct categories present for a school (for the filter UI). */
   categoriesForSchool(schoolId: string): Promise<string[]>;
@@ -150,10 +156,94 @@ export interface WishlistRepository {
   listForSchool(schoolId: string): Promise<WishlistItem[]>;
   create(input: NewWishlistItem): Promise<WishlistItem>;
   updateStatus(id: string, status: WishlistStatus): Promise<void>;
+  /** Toggle whether this "looking for" request is shown on the owner's stall. */
+  setShowOnStall(id: string, show: boolean): Promise<void>;
   /** Soft-delete (cancel + hide) a wishlist item the caller owns. */
   remove(id: string): Promise<void>;
   /** The caller's match outbox: listings the backend matched to their wishlist. */
   matchesForMe(): Promise<WishlistMatch[]>;
+}
+
+/* ------------------------------------------------------------ student stalls */
+
+export interface StallRepository {
+  /** Stalls at a school, most-recently-opened first (for "Browse Stalls"). */
+  listForSchool(schoolId: string): Promise<Stall[]>;
+  /** A stall + its content by stall id (for the stall detail screen). */
+  getById(id: string): Promise<StallDetail | null>;
+  /** A stall + its content by owner (used for "another student's stall"). */
+  getByUser(schoolId: string, userId: string): Promise<StallDetail | null>;
+  /** The caller's own stall, or null if they haven't opened one yet. */
+  getMine(schoolId: string): Promise<StallDetail | null>;
+  /** Open the caller's stall or edit its description (extremely low-friction). */
+  open(schoolId: string, description: string | null): Promise<Stall>;
+}
+
+/* --------------------------------------------------------- temporary markets */
+
+/** The fields needed to create a temporary market (host + ids resolved by repo). */
+export interface NewMarket {
+  schoolId: string;
+  title: string;
+  description: string | null;
+  hostLabel: string | null;
+  coverImage: ImageRef | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  location: string | null;
+  handoffInstructions: string | null;
+  allowedCategories: string[];
+  allowsRegulated: boolean;
+  status: MarketStatus;
+}
+
+export interface MarketRepository {
+  /** Temporary markets at a school (directory), most recent first. */
+  listForSchool(schoolId: string): Promise<Market[]>;
+  /** A market + its participating listings + viewer participation flags. */
+  getById(id: string): Promise<MarketDetail | null>;
+  /** Create a temporary market (host is the caller). */
+  create(input: NewMarket, host: OwnerPreview): Promise<Market>;
+  /** Host- or staff-driven status change (e.g. cancel or end a market). */
+  setStatus(id: string, status: MarketStatus): Promise<void>;
+  /** Join a market as a seller (idempotent). */
+  join(marketId: string): Promise<void>;
+  /** Leave a market (removes the caller's seller participation). */
+  leave(marketId: string): Promise<void>;
+  /** Associate a listing the caller owns with a market. */
+  addListing(marketId: string, listingId: string): Promise<void>;
+  /** Remove a listing↔market association (never deletes the listing). */
+  removeListing(marketId: string, listingId: string): Promise<void>;
+}
+
+/* ---------------------------------------------------- campus-market discovery */
+
+/** A named discovery shelf. `signal` labels the deterministic basis (no fake stats). */
+export interface DiscoveryShelf {
+  key: string;
+  title: string;
+  /** Which deterministic signal produced this shelf (shown as a subtle subtitle). */
+  signal: "recency" | "wishlist" | "demand" | "category" | "free" | "ending" | "stalls";
+  subtitle: string;
+  listings: Listing[];
+}
+
+/** Privacy-safe aggregate demand for a normalized "students are looking for" cluster. */
+export interface DemandCluster {
+  key: string;
+  label: string;
+  /** How many DISTINCT students have an active wishlist request in this cluster. */
+  studentCount: number;
+  category: string | null;
+}
+
+export interface CampusMarketRepository {
+  /** The always-open Campus Market discovery shelves for a school. */
+  shelves(schoolId: string): Promise<DiscoveryShelf[]>;
+  /** "Students Are Looking For": privacy-safe demand clusters (no student names). */
+  demand(schoolId: string): Promise<DemandCluster[]>;
+  /** Recently-opened stalls, for the "New Stalls" shelf. */
+  recentStalls(schoolId: string, limit?: number): Promise<Stall[]>;
 }
 
 /* ------------------------------------------------------------- aggregate DI */
@@ -166,4 +256,7 @@ export interface Repositories {
   saved: SavedListingsRepository;
   drafts: DraftListingsRepository;
   wishlist: WishlistRepository;
+  stalls: StallRepository;
+  markets: MarketRepository;
+  campusMarket: CampusMarketRepository;
 }

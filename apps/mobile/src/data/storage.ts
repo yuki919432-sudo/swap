@@ -58,6 +58,14 @@ export const StorageKeys = {
   drafts: "swap.demo.drafts",
   publishedDemoListings: "swap.demo.publishedListings",
   demoWishlist: "swap.demo.wishlist",
+  /** Locally-opened student stalls (demo mode), keyed nowhere — a list. */
+  demoStalls: "swap.demo.stalls",
+  /** Locally-created temporary markets (demo mode). */
+  demoMarkets: "swap.demo.markets",
+  /** Local market seller participation: array of {marketId,userId}. */
+  demoMarketSellers: "swap.demo.marketSellers",
+  /** Local listing↔market associations: array of {marketId,listingId,userId}. */
+  demoMarketListings: "swap.demo.marketListings",
   /** Categories the user has recently browsed (a client-side recommendation signal). */
   browsedCategories: "swap.browsedCategories",
 } as const;

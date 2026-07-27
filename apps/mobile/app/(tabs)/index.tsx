@@ -127,6 +127,20 @@ export default function HomeScreen() {
         ))}
       </View>
 
+      {/* Campus Market entry */}
+      <Card onPress={() => router.push("/campus-market")} style={{ marginTop: theme.spacing.lg }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.md }}>
+          <AppText style={{ fontSize: 24 }}>🎪</AppText>
+          <View style={{ flex: 1 }}>
+            <AppText variant="bodyStrong">Campus Market</AppText>
+            <AppText variant="caption" color="textMuted">
+              Browse stalls, pop-up markets, and shelves picked for your school.
+            </AppText>
+          </View>
+          <AppText color="textFaint">›</AppText>
+        </View>
+      </Card>
+
       {/* Wishlist entry */}
       <Card onPress={() => router.push("/wishlist")} elevation="none" style={{ marginTop: theme.spacing.lg }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.md }}>

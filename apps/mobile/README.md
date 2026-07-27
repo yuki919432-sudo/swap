@@ -141,6 +141,41 @@ signal. The authoritative wishlist match outbox is computed server-side; the cli
 engine powers the broader shelves and can be swapped for a smarter/served ranker
 later without touching the UI.
 
+## Campus Markets & Student Stalls
+
+A year-round student flea-market district inside each school. Three surfaces, all
+behind the same repository abstraction (`StallRepository`, `MarketRepository`,
+`CampusMarketRepository` — Mock + Supabase):
+
+- **Campus Market** (`/campus-market`) — the school's always-open, discovery-first
+  market. It is **derived**, not a table: it turns the school's listings + the
+  viewer's wishlist into deterministic shelves via `buildDiscoveryShelves`
+  (`src/data/repositories/campusDiscovery.ts`). Each shelf carries a *supported
+  signal* — recency, wishlist match, category, free, ending-soon — and an honest
+  subtitle. We **never** invent popularity or view counts. "Students Are Looking
+  For" surfaces **privacy-safe** demand clusters (`buildDemandClusters`): distinct
+  student counts only, no names or ids.
+- **Student Stalls** (`/stalls`, `/stall/[id]`, `/my-stall`) — a casual personal
+  profile over a student's own listings; *not* a business storefront (no inventory
+  dashboards, sales analytics, or payment config). Opening a stall is one tap. My
+  Stall shows the owner's give/swap/looking-for/borrow/lend breakdown and lets the
+  owner choose which wishlist requests are visible on the stall (`show_on_stall`).
+- **Temporary Markets** (`/markets`, `/markets/[id]`, `/markets/create`,
+  `/markets/add-listing`) — themed, time-boxed pop-ups hosted by students/clubs.
+  May be fully online or tied to a general campus spot (**no maps, no private
+  addresses**). Verified students join as sellers, add existing listings they own
+  or create new ones for the market, and remove their own; hosts can end/cancel.
+  A listing may belong to zero or more markets while still living in the Campus
+  Market and on its owner's stall — removing an association or cancelling a market
+  never deletes the listing.
+
+Creating a market passes the same two gates as a listing: shared validation
+(`createMarketSchema`) **and** the local moderation simulator over the market text
+*and every allowed category* (`src/features/createMarket.ts`), keeping the
+strictest verdict — so a market can't become a side door for prohibited or
+institution-disabled regulated categories (high schools can never enable
+regulated).
+
 ## Local persistence
 
 Repositories persist through a tiny `KeyValueStore` (`src/data/storage.ts`):

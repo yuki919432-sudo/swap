@@ -14,6 +14,7 @@ import {
   WISHLIST_URGENCY,
   WISHLIST_STATUS,
   WISHLIST_VISIBILITY,
+  MARKET_STATUS,
 } from "@swap/types";
 import { uuid, shortText, mediumText, longText, email, timezone, gradYear, isoDateTime } from "./primitives.js";
 
@@ -219,8 +220,40 @@ export type CreateWishlistItemInput = z.infer<typeof createWishlistItemSchema>;
 
 export const updateWishlistItemSchema = createWishlistItemSchema.partial().extend({
   status: zEnum(WISHLIST_STATUS).optional(),
+  showOnStall: z.boolean().optional(),
 });
 export type UpdateWishlistItemInput = z.infer<typeof updateWishlistItemSchema>;
+
+/* --------------------------------------------------- Campus markets / stalls */
+
+/** Open or edit a lightweight student stall (low-friction: only a description). */
+export const upsertStallSchema = z.object({
+  schoolId: uuid,
+  description: mediumText.nullable().optional(),
+});
+export type UpsertStallInput = z.infer<typeof upsertStallSchema>;
+
+/** Create a themed temporary market. Physical location is always optional. */
+export const createMarketSchema = z.object({
+  schoolId: uuid,
+  title: shortText,
+  description: longText.nullable().optional(),
+  hostLabel: shortText.nullable().optional(),
+  startsAt: isoDateTime.nullable().optional(),
+  endsAt: isoDateTime.nullable().optional(),
+  location: shortText.nullable().optional(),
+  handoffInstructions: mediumText.nullable().optional(),
+  allowedCategories: z.array(category).max(20).default([]),
+  allowsRegulated: z.boolean().default(false),
+  status: zEnum(MARKET_STATUS).default("upcoming"),
+}).refine((v) => !v.startsAt || !v.endsAt || v.endsAt >= v.startsAt, {
+  message: "market_end_must_be_after_start",
+  path: ["endsAt"],
+});
+export type CreateMarketInput = z.infer<typeof createMarketSchema>;
+
+export const addListingToMarketSchema = z.object({ marketId: uuid, listingId: uuid });
+export const joinMarketSchema = z.object({ marketId: uuid });
 
 /* --------------------------------------------------------- School admin ops */
 

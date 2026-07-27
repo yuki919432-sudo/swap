@@ -46,7 +46,7 @@ export default function CreateListingScreen() {
   const router = useRouter();
   const repos = useRepositories();
   const { session } = useSession();
-  const { draftId } = useLocalSearchParams<{ draftId?: string }>();
+  const { draftId, marketId } = useLocalSearchParams<{ draftId?: string; marketId?: string }>();
 
   const [id] = useState(() => draftId ?? newId("draft"));
   const [postType, setPostType] = useState<ListingPostType>("give");
@@ -155,6 +155,14 @@ export default function CreateListingScreen() {
       });
       if (result.published && result.listing) {
         await repos.drafts.markPublished(id, result.listing.id);
+        // If we came from a market, associate the new listing with it.
+        if (marketId) {
+          try {
+            await repos.markets.addListing(marketId, result.listing.id);
+          } catch {
+            // Non-fatal: the listing published; the user can add it from the market.
+          }
+        }
         setPublishedSheet(true);
       }
       // If not published, the ModerationNotice below already explains why; the draft
@@ -318,7 +326,7 @@ export default function CreateListingScreen() {
         visible={publishedSheet}
         onClose={() => {
           setPublishedSheet(false);
-          router.replace("/my-listings");
+          router.replace(marketId ? `/markets/${marketId}` : "/my-listings");
         }}
         emoji="🎉"
         title="Published to your demo feed"
