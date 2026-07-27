@@ -13,6 +13,7 @@ insert into allow values
   ('app','is_platform_admin'), ('app','has_platform_role'), ('app','is_conversation_member'),
   ('app','is_blocked_between'), ('app','shares_verified_school'), ('app','has_block_in_conversation'),
   ('app','can_create_market'),
+  ('app','start_conversation'), ('app','conversation_unread_counts'),
   ('app','create_invitation'), ('app','redeem_invitation'), ('app','create_offer'),
   ('app','accept_offer'), ('app','decline_offer'), ('app','cancel_offer'),
   ('app','confirm_handoff'), ('app','join_event'), ('app','get_member_email'),

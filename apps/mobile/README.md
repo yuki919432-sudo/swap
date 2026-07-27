@@ -176,6 +176,42 @@ strictest verdict — so a market can't become a side door for prohibited or
 institution-disabled regulated categories (high schools can never enable
 regulated).
 
+## Messaging
+
+Real, same-school 1:1 conversations tied to a listing, market, or stall (or none),
+behind `MessagingRepository` (Mock + Supabase). Screens: **Inbox**
+(`/(tabs)/inbox`) and **Conversation thread** (`/messages/[id]`); entry points are
+"Message owner" (Listing detail), "Message <name>" (Student Stall), and "Message
+host" (Temporary Market).
+
+- **Conversations** are created only through the `app.start_conversation` RPC
+  (SECURITY DEFINER), which verifies both users share a *verified* school, rejects
+  self/blocked, and **de-duplicates** (one active conversation per pair per
+  context). A listing/market/stall conversation shows a context card; if the item
+  is later removed the conversation is preserved and the card shows an *unavailable*
+  state.
+- **Privacy is participant-only.** RLS lets only the two participants read a
+  conversation or its messages — moderators and platform admins do **not** get
+  message access. `sender_id` is pinned to the authenticated user; cross-school and
+  pending/suspended users can't initiate or send.
+- **Read state** is per-user (`conversation_members.last_read_at`); unread counts
+  come from `app.conversation_unread_counts()` and drive the Inbox badges. Opening a
+  thread marks it read.
+- **Optimistic send with reconciliation**: a message appears immediately; on failure
+  the bubble is marked *Failed* with a Retry action. Outgoing text first passes the
+  local moderation simulator (`assessMessage`) — warn/block/escalate is shown and
+  the text is **never transmitted**.
+- **Blocking** (directed, `blocks` table) prevents starting or sending; existing
+  history stays visible to the blocker. Blocking can't weaken school isolation.
+- **Realtime**: this checkpoint uses an explicit **poll-based refresh**
+  (`watchConversation`, ~5s) — *not* fake realtime. A Supabase Realtime channel can
+  replace it behind the same signature later; reconnection would then be the
+  Realtime client's responsibility. Today, each tick is an independent fetch, so
+  transient failures self-heal on the next interval.
+
+Not in this checkpoint: offers, payments, file/image/voice/location attachments,
+push notifications, and any production Trust & Safety backend.
+
 ## Local persistence
 
 Repositories persist through a tiny `KeyValueStore` (`src/data/storage.ts`):

@@ -12,11 +12,12 @@ import type { Repositories } from "../types";
 import { SupabaseMarketplaceRepository, type ImageReader } from "./marketplace";
 import { SupabaseSavedListingsRepository } from "./saved";
 import { SupabaseSessionRepository } from "./session";
-import { SupabaseCommunityRepository, SupabaseInboxRepository } from "./community";
+import { SupabaseCommunityRepository } from "./community";
 import { SupabaseWishlistRepository } from "./wishlist";
 import { SupabaseStallRepository } from "./stall";
 import { SupabaseMarketRepository } from "./market";
 import { SupabaseCampusMarketRepository } from "./campusMarket";
+import { SupabaseMessagingRepository } from "./messaging";
 
 export function createSupabaseRepositories(
   client: SupabaseClient,
@@ -29,7 +30,7 @@ export function createSupabaseRepositories(
     session: new SupabaseSessionRepository(client),
     marketplace: new SupabaseMarketplaceRepository(client, opts),
     community: new SupabaseCommunityRepository(),
-    inbox: new SupabaseInboxRepository(),
+    messaging: new SupabaseMessagingRepository(client),
     saved: new SupabaseSavedListingsRepository(client),
     drafts: new MockDraftListingsRepository(store),
     wishlist: new SupabaseWishlistRepository(client),
@@ -47,5 +48,6 @@ export {
   SupabaseStallRepository,
   SupabaseMarketRepository,
   SupabaseCampusMarketRepository,
+  SupabaseMessagingRepository,
 };
 export type { ImageReader };

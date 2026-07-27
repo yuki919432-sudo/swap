@@ -9,6 +9,7 @@ const days = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
 const L = (over: Partial<Listing>): Listing => ({
   id: over.id ?? "l",
   schoolId: "s1",
+  ownerId: "owner1",
   postType: "give",
   status: "active",
   title: "Item",

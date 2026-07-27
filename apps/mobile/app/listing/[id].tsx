@@ -15,6 +15,7 @@ import {
 } from "../../src/components";
 import { useTheme } from "../../src/theme";
 import { useRepositories } from "../../src/data/repositories";
+import { useSession } from "../../src/session/SessionProvider";
 import type { Listing } from "../../src/domain/models";
 import { postTypeEmoji, postTypeLabel, conditionLabel, categoryLabel } from "../../src/lib/labels";
 import { timeAgo } from "../../src/lib/id";
@@ -29,6 +30,7 @@ export default function ListingDetailScreen() {
   const theme = useTheme();
   const router = useRouter();
   const repos = useRepositories();
+  const { session } = useSession();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [listing, setListing] = useState<Listing | null>(null);
   const [saved, setSaved] = useState(false);
@@ -79,8 +81,17 @@ export default function ListingDetailScreen() {
     }
   };
 
-  const primaryLabel =
-    listing.postType === "looking_for" ? "I have this" : listing.postType === "borrow" ? "I can lend this" : "Make an offer";
+  const isOwn = session?.profile.id === listing.ownerId;
+
+  const messageOwner = async () => {
+    if (!listing) return;
+    try {
+      const cid = await repos.messaging.startConversation({ otherUserId: listing.ownerId, listingId: listing.id });
+      router.push(`/messages/${cid}`);
+    } catch {
+      setSheet({ emoji: "💬", title: "Couldn't start a chat", message: "You can only message verified students at your school. Please try again." });
+    }
+  };
 
   return (
     <Screen scroll padded={false} edges={["top"]}>
@@ -168,17 +179,11 @@ export default function ListingDetailScreen() {
             onPress={() => setSheet({ emoji: "🚩", title: "Reporting is coming soon", message: "Reporting routes to human review in a later milestone. Thanks for helping keep campus safe." })}
           />
           <View style={{ flex: 1 }}>
-            <Button
-              label={primaryLabel}
-              icon="chatbubble-ellipses-outline"
-              onPress={() =>
-                setSheet({
-                  emoji: "💬",
-                  title: "Messaging & offers are coming soon",
-                  message: "In the demo, we don't create real conversations or offers. Direct messaging and the offer/handoff flow arrive in a later milestone.",
-                })
-              }
-            />
+            {isOwn ? (
+              <Button label="This is your listing" variant="secondary" disabled onPress={() => {}} />
+            ) : (
+              <Button label="Message owner" icon="chatbubble-ellipses-outline" onPress={messageOwner} />
+            )}
           </View>
         </View>
 

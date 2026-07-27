@@ -5,6 +5,7 @@ import type { Listing, WishlistItem } from "../domain/models";
 const listing = (over: Partial<Listing>): Listing => ({
   id: "l1",
   schoolId: "s1",
+  ownerId: "owner1",
   postType: "give",
   status: "active",
   title: "Mini fridge",

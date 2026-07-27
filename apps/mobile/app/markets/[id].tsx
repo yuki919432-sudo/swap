@@ -90,6 +90,18 @@ export default function MarketDetailScreen() {
           {market.description}
         </AppText>
       ) : null}
+      {!amHost ? (
+        <Button
+          label={`Message ${market.hostLabel ?? market.host.displayName}`}
+          variant="secondary"
+          icon="chatbubble-ellipses-outline"
+          onPress={async () => {
+            const cid = await repos.messaging.startConversation({ otherUserId: market.hostUserId, marketId: market.id });
+            router.push(`/messages/${cid}`);
+          }}
+          style={{ marginTop: theme.spacing.md }}
+        />
+      ) : null}
 
       {/* Details */}
       <Card elevation="none" style={{ marginTop: theme.spacing.lg, gap: theme.spacing.xs }}>

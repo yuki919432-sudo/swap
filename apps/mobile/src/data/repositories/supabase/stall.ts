@@ -67,6 +67,7 @@ const owner = (u: UserLite | null): OwnerPreview => ({
 const toListing = (r: ListingLite, o: OwnerPreview): Listing => ({
   id: r.id,
   schoolId: r.school_id,
+  ownerId: r.owner_id,
   postType: r.post_type,
   status: r.status as Listing["status"],
   title: r.title,

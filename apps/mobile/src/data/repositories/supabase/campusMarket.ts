@@ -49,6 +49,7 @@ const owner = (id: string, name: string | null): OwnerPreview => ({ displayName:
 const toListing = (r: ListingLite, name: string | null): Listing => ({
   id: r.id,
   schoolId: r.school_id,
+  ownerId: r.owner_id,
   postType: r.post_type,
   status: r.status as Listing["status"],
   title: r.title,

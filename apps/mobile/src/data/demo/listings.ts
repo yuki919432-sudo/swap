@@ -17,6 +17,7 @@ const img = (emoji: string): { kind: "placeholder"; value: string } => ({ kind: 
 export const demoListings: Listing[] = [
   {
     id: "l-uni-1",
+    ownerId: "profile-uni-verified",
     schoolId: "school-uni",
     postType: "give",
     status: "active",
@@ -34,6 +35,7 @@ export const demoListings: Listing[] = [
   },
   {
     id: "l-uni-2",
+    ownerId: "u-priya",
     schoolId: "school-uni",
     postType: "swap",
     title: "Graphing calculator for a desk lamp",
@@ -51,6 +53,7 @@ export const demoListings: Listing[] = [
   },
   {
     id: "l-uni-3",
+    ownerId: "u-sam",
     schoolId: "school-uni",
     postType: "looking_for",
     title: "Looking for a mini fridge",
@@ -68,6 +71,7 @@ export const demoListings: Listing[] = [
   },
   {
     id: "l-uni-4",
+    ownerId: "profile-uni-moderator",
     schoolId: "school-uni",
     postType: "lend",
     title: "Lending a physics lab coat",
@@ -85,6 +89,7 @@ export const demoListings: Listing[] = [
   },
   {
     id: "l-uni-5",
+    ownerId: "u-jordan",
     schoolId: "school-uni",
     postType: "give",
     title: "Desk chair — free to a good home",
@@ -102,6 +107,7 @@ export const demoListings: Listing[] = [
   },
   {
     id: "l-uni-6",
+    ownerId: "u-nina",
     schoolId: "school-uni",
     postType: "borrow",
     title: "Borrow: portable projector for one night",
@@ -119,6 +125,7 @@ export const demoListings: Listing[] = [
   },
   {
     id: "l-uni-7",
+    ownerId: "u-theo",
     schoolId: "school-uni",
     postType: "swap",
     title: "Road bike helmet for climbing shoes (US 9)",
@@ -136,6 +143,7 @@ export const demoListings: Listing[] = [
   },
   {
     id: "l-uni-8",
+    ownerId: "profile-uni-verified",
     schoolId: "school-uni",
     postType: "give",
     title: "Acoustic guitar picks + capo",
@@ -153,6 +161,7 @@ export const demoListings: Listing[] = [
   },
   {
     id: "l-hs-1",
+    ownerId: "profile-hs-verified",
     schoolId: "school-hs",
     postType: "give",
     title: "Spanish 2 workbook",
@@ -170,6 +179,7 @@ export const demoListings: Listing[] = [
   },
   {
     id: "l-hs-2",
+    ownerId: "u-riley",
     schoolId: "school-hs",
     postType: "swap",
     title: "Soccer cleats (US 7) for shin guards",
@@ -187,6 +197,7 @@ export const demoListings: Listing[] = [
   },
   {
     id: "l-hs-3",
+    ownerId: "profile-hs-pending",
     schoolId: "school-hs",
     postType: "looking_for",
     title: "Looking for a graphing calculator",
@@ -204,6 +215,7 @@ export const demoListings: Listing[] = [
   },
   {
     id: "l-hs-4",
+    ownerId: "profile-hs-verified",
     schoolId: "school-hs",
     postType: "give",
     title: "Art club supplies bundle",

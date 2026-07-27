@@ -235,6 +235,20 @@ export type MarketStatus = (typeof MARKET_STATUS)[number];
 export const MARKET_CREATION_POLICY = ["verified_students", "clubs_only", "moderators_only"] as const;
 export type MarketCreationPolicy = (typeof MARKET_CREATION_POLICY)[number];
 
+/* -------------------------------------------------------------- Messaging */
+
+/** Conversation lifecycle. */
+export const CONVERSATION_STATUS = ["active", "archived", "closed"] as const;
+export type ConversationStatus = (typeof CONVERSATION_STATUS)[number];
+
+/** Message kinds. Extensible: future offer/handoff/attachment types slot in here. */
+export const MESSAGE_TYPE = ["text", "system"] as const;
+export type MessageType = (typeof MESSAGE_TYPE)[number];
+
+/** Per-message moderation state (prepared for a future production pipeline). */
+export const MESSAGE_MODERATION_STATUS = ["clear", "flagged", "hidden"] as const;
+export type MessageModerationStatus = (typeof MESSAGE_MODERATION_STATUS)[number];
+
 /** Marketplace categories seeded at bootstrap; schools may enable/disable per-school. */
 export const DEFAULT_CATEGORIES = [
   "textbooks",

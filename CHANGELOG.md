@@ -5,6 +5,56 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Phase 1G — Messaging vertical slice (2026-07-27)
+
+Real, same-school 1:1 messaging tied to listings, stalls, and markets — enough for
+students to ask "is this still available?", coordinate a swap/borrow, or arrange a
+pickup. No offers, payments, attachments, push, or realtime. Builds on the Phase 1A
+messaging tables (0010) and directed blocks (0012).
+
+**Backend (migration 0030)**
+- Extends `conversations` with `status` (active/archived/closed), `last_message_at`,
+  explicit `listing_id`/`market_id`/`stall_id`, and a canonical `dedup_key` with a
+  partial unique index → **at most one active conversation per pair per context**.
+  `conversation_members` gains `last_read_message_id`; `messages` gains `type`
+  (text/system), `edited_at`, `deleted_at`, `moderation_status`, and a nullable
+  `sender_id` (system messages have none, enforced by a check).
+- **Tightens message privacy**: conversation/message/member SELECT is now
+  **participant-only**. The Phase 1A staff-read clauses are dropped — moderators and
+  platform admins no longer read private message content. Future safety review must
+  go through the explicit reports table, not an ambient policy. Direct conversation
+  INSERT is removed (creation only via the RPC); message INSERT is pinned to
+  `sender_id = auth.uid()`, `type = 'text'`, an active conversation, verified
+  membership, and no block.
+- `app.start_conversation(other, listing?, market?, stall?)` — SECURITY DEFINER,
+  idempotent: verifies both users share a **verified** school, rejects self/blocked,
+  de-dups, and seeds both members + a system message atomically.
+  `app.conversation_unread_counts()` — per-user unread (messages after the caller's
+  `last_read_at`, not their own, not deleted). Both allowlisted; a trigger keeps
+  `last_message_at` fresh.
+- New enums `conversation_status` / `message_type` / `message_moderation_status`
+  (TS + DB, parity 35/35). pgTAP `34_messaging.sql` (23 assertions): start + dedup,
+  participant-only reads, **moderator/cross-school/non-participant cannot read or
+  infer**, sender-spoof blocked, pending/suspended cannot initiate, conversation
+  survives listing soft-delete, per-user read state, block prevents sends.
+
+**Mobile**
+- `MessagingRepository` (Mock + Supabase) behind the existing abstraction:
+  list/get conversations, start (RPC), send, mark-read, unread total, block/unblock,
+  and a poll-based `watchConversation` **refresh abstraction (explicitly not fake
+  realtime)**. `Listing` gains `ownerId` so "Message owner" knows the recipient.
+  Schemas `startConversationSchema` / `editMessageSchema` in `@swap/validation`.
+- Outgoing text passes the local moderation simulator (`assessMessage`) before send;
+  warn/block/escalate is shown and the text is **not transmitted**.
+- Screens: a real **Inbox** (list, unread badges, empty/loading/error+retry,
+  latest-activity sort), a **Conversation thread** (chronological bubbles, sender
+  distinction, context header with unavailable state, optimistic send + failed-send
+  retry, keyboard-safe, block/unblock), and entry points — "Message owner" (Listing
+  detail), "Message <name>" (Student Stall), "Message host" (Temporary Market).
+- Tests: `messaging.mock` (start/dedup, per-user read state, block, unavailable
+  context), `sendMessage` (moderation gate), and a real-backend integration proof
+  (`messaging.integration`) across two schools + a pending member.
+
 ### Phase 1F — Campus Markets & Student Stalls (2026-07-27)
 
 A year-round student flea-market district inside each school: an always-open,

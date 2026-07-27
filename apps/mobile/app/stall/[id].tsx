@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { View } from "react-native";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
-import { Screen, AppText, Card, Avatar, IconButton, Badge, ListingCard, EmptyState, WishlistCard, Divider } from "../../src/components";
+import { Screen, AppText, Card, Avatar, IconButton, Badge, Button, ListingCard, EmptyState, WishlistCard, Divider } from "../../src/components";
 import { useTheme } from "../../src/theme";
 import { useRepositories } from "../../src/data/repositories";
 import { useSession } from "../../src/session/SessionProvider";
@@ -71,6 +71,17 @@ export default function StallDetailScreen() {
           <AppText variant="callout" color="textMuted" center style={{ maxWidth: 300 }}>
             {stall.description}
           </AppText>
+        ) : null}
+        {!isMine ? (
+          <Button
+            label={`Message ${stall.owner.displayName}`}
+            icon="chatbubble-ellipses-outline"
+            fullWidth={false}
+            onPress={async () => {
+              const cid = await repos.messaging.startConversation({ otherUserId: stall.userId, stallId: stall.id });
+              router.push(`/messages/${cid}`);
+            }}
+          />
         ) : null}
       </View>
 

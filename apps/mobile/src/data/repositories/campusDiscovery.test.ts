@@ -7,6 +7,7 @@ const hoursAgo = (h: number) => new Date(now - h * 3600_000).toISOString();
 
 const listing = (over: Partial<Listing> & { id: string }): Listing => ({
   schoolId: "s1",
+  ownerId: "owner1",
   postType: "give",
   status: "active",
   title: "Item",
