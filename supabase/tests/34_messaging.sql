@@ -40,7 +40,7 @@ insert into listings (id, school_id, owner_id, post_type, title, description, ca
 -- ============================================= start a conversation
 select tests.authenticate_as('d0000000-0000-0000-0000-000000000001');
 create temp table conv as
-  select app.start_conversation(
+  select public.start_conversation(
     'd0000000-0000-0000-0000-000000000002',
     '99990000-0000-0000-0000-000000000001', null, null) as id;
 select isnt((select id from conv), null, 'a verified student can start a conversation with a same-school student about a listing');
@@ -51,7 +51,7 @@ select is((select count(*)::int from messages where conversation_id = (select id
 
 -- de-dup: same pair + same listing returns the SAME conversation
 select is(
-  app.start_conversation('d0000000-0000-0000-0000-000000000002','99990000-0000-0000-0000-000000000001', null, null),
+  public.start_conversation('d0000000-0000-0000-0000-000000000002','99990000-0000-0000-0000-000000000001', null, null),
   (select id from conv),
   'starting again for the same pair + context is de-duplicated to one active conversation');
 
@@ -75,7 +75,7 @@ select tests.authenticate_as('d0000000-0000-0000-0000-000000000002');
 select ok((select count(*)::int from messages where conversation_id = (select id from conv)) >= 2,
   'the other participant can read the conversation messages');
 select ok(
-  (select unread from app.conversation_unread_counts() where conversation_id = (select id from conv)) >= 1,
+  (select unread from public.conversation_unread_counts() where conversation_id = (select id from conv)) >= 1,
   'the recipient has unread messages before opening the thread');
 -- the recipient replies (so the initiator will have something unread) ...
 insert into messages (conversation_id, school_id, sender_id, body, created_at)
@@ -84,14 +84,14 @@ insert into messages (conversation_id, school_id, sender_id, body, created_at)
 update conversation_members set last_read_at = clock_timestamp()
   where conversation_id = (select id from conv) and user_id = 'd0000000-0000-0000-0000-000000000002';
 select ok(
-  not exists (select 1 from app.conversation_unread_counts() where conversation_id = (select id from conv)),
+  not exists (select 1 from public.conversation_unread_counts() where conversation_id = (select id from conv)),
   'opening the thread clears the recipient''s unread count');
 select tests.reset_auth();
 
 -- read state is per-user: the initiator has NOT read the recipient's reply
 select tests.authenticate_as('d0000000-0000-0000-0000-000000000001');
 select ok(
-  exists (select 1 from app.conversation_unread_counts() where conversation_id = (select id from conv)),
+  exists (select 1 from public.conversation_unread_counts() where conversation_id = (select id from conv)),
   'read state is per-user: the initiator still has unread items after the recipient read');
 select tests.reset_auth();
 
@@ -124,21 +124,21 @@ select tests.reset_auth();
 -- a pending member cannot start a conversation
 select tests.authenticate_as('d0000000-0000-0000-0000-000000000005');
 select throws_ok(
-  $$select app.start_conversation('d0000000-0000-0000-0000-000000000001', null, null, null)$$,
+  $$select public.start_conversation('d0000000-0000-0000-0000-000000000001', null, null, null)$$,
   '42501', null, 'a pending member cannot start a conversation');
 select tests.reset_auth();
 
 -- a suspended member cannot start a conversation
 select tests.authenticate_as('d0000000-0000-0000-0000-000000000006');
 select throws_ok(
-  $$select app.start_conversation('d0000000-0000-0000-0000-000000000001', null, null, null)$$,
+  $$select public.start_conversation('d0000000-0000-0000-0000-000000000001', null, null, null)$$,
   '42501', null, 'a suspended member cannot start a conversation');
 select tests.reset_auth();
 
 -- a cross-school user cannot start a conversation with a School A student
 select tests.authenticate_as('d0000000-0000-0000-0000-000000000007');
 select throws_ok(
-  $$select app.start_conversation('d0000000-0000-0000-0000-000000000001', null, null, null)$$,
+  $$select public.start_conversation('d0000000-0000-0000-0000-000000000001', null, null, null)$$,
   '42501', null, 'a cross-school user cannot start a conversation (no cross-school messaging)');
 select tests.reset_auth();
 
@@ -162,7 +162,7 @@ select throws_ok(
   '42501', null, 'a blocked user cannot send new messages into the conversation');
 -- and cannot start a fresh conversation with the blocker
 select throws_ok(
-  $$select app.start_conversation('d0000000-0000-0000-0000-000000000001', null, null, null)$$,
+  $$select public.start_conversation('d0000000-0000-0000-0000-000000000001', null, null, null)$$,
   '42501', null, 'a block prevents starting a new conversation');
 select tests.reset_auth();
 

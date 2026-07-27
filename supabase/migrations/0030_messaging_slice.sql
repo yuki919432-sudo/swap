@@ -101,7 +101,9 @@ create policy messages_update on messages for update to authenticated
 -- Idempotent: returns the existing active conversation for the same pair+context,
 -- else creates it with both members + a system message. All the security checks
 -- (same verified school, not blocked) live here so clients cannot bypass them.
-create or replace function app.start_conversation(
+-- Declared in `public` (not `app`) because PostgREST only exposes `public`, so
+-- clients call it via .rpc('start_conversation'). It calls app.* helpers internally.
+create or replace function public.start_conversation(
   p_other   uuid,
   p_listing uuid default null,
   p_market  uuid default null,
@@ -176,13 +178,13 @@ begin
   return v_conv;
 end;
 $$;
-revoke execute on function app.start_conversation(uuid, uuid, uuid, uuid) from public;
-grant execute on function app.start_conversation(uuid, uuid, uuid, uuid) to authenticated, service_role;
+revoke execute on function public.start_conversation(uuid, uuid, uuid, uuid) from public;
+grant execute on function public.start_conversation(uuid, uuid, uuid, uuid) to authenticated, service_role;
 
 -- ---------------------------------------------------- unread-count helper -----
 -- Per-user unread counts (messages after the caller's last_read_at, not their own,
 -- not soft-deleted). Definer so a single round-trip powers the inbox + badge.
-create or replace function app.conversation_unread_counts()
+create or replace function public.conversation_unread_counts()
 returns table (conversation_id uuid, unread integer)
 language sql
 stable
@@ -198,8 +200,8 @@ as $$
     and m.created_at > cm.last_read_at
   group by cm.conversation_id;
 $$;
-revoke execute on function app.conversation_unread_counts() from public;
-grant execute on function app.conversation_unread_counts() to authenticated, service_role;
+revoke execute on function public.conversation_unread_counts() from public;
+grant execute on function public.conversation_unread_counts() to authenticated, service_role;
 
 -- ------------------------------------------- keep last_message_at fresh -------
 create or replace function app.touch_conversation_on_message()

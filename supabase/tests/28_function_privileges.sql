@@ -13,7 +13,6 @@ insert into allow values
   ('app','is_platform_admin'), ('app','has_platform_role'), ('app','is_conversation_member'),
   ('app','is_blocked_between'), ('app','shares_verified_school'), ('app','has_block_in_conversation'),
   ('app','can_create_market'),
-  ('app','start_conversation'), ('app','conversation_unread_counts'),
   ('app','create_invitation'), ('app','redeem_invitation'), ('app','create_offer'),
   ('app','accept_offer'), ('app','decline_offer'), ('app','cancel_offer'),
   ('app','confirm_handoff'), ('app','join_event'), ('app','get_member_email'),
@@ -21,7 +20,8 @@ insert into allow values
   ('public','get_membership_status'), ('public','redeem_invitation'),
   ('public','resolve_roster_membership'), ('public','request_membership'),
   ('public','review_membership_request'), ('public','set_membership_status'),
-  ('public','verify_email_otp'), ('public','get_email_delivery_status');
+  ('public','verify_email_otp'), ('public','get_email_delivery_status'),
+  ('public','start_conversation'), ('public','conversation_unread_counts');
 
 -- ---- app.write_audit is not executable by authenticated -------------------
 select ok(
