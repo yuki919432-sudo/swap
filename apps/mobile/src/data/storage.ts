@@ -66,6 +66,14 @@ export const StorageKeys = {
   demoMarketSellers: "swap.demo.marketSellers",
   /** Local listing↔market associations: array of {marketId,listingId,userId}. */
   demoMarketListings: "swap.demo.marketListings",
+  /** Locally-created conversations (demo mode). */
+  demoConversations: "swap.demo.conversations",
+  /** Locally-sent messages (demo mode): array of message rows. */
+  demoMessages: "swap.demo.messages",
+  /** Per-conversation read state for the demo user: {conversationId: lastReadAtISO}. */
+  demoReadState: "swap.demo.readState",
+  /** User ids the demo user has blocked. */
+  demoBlocks: "swap.demo.blocks",
   /** Categories the user has recently browsed (a client-side recommendation signal). */
   browsedCategories: "swap.browsedCategories",
 } as const;

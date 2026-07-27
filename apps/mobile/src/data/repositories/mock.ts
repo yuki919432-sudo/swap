@@ -7,11 +7,14 @@
  */
 import type {
   CommunityItem,
+  Conversation,
+  ConversationContext,
+  ConversationDetail,
   DemoSchool,
-  InboxThread,
   Listing,
   Market,
   MarketDetail,
+  Message,
   OwnerPreview,
   Stall,
   StallDetail,
@@ -24,7 +27,10 @@ import {
   type DemoMarket,
   type DemoStall,
   demoCommunity,
-  demoInbox,
+  demoConversations,
+  demoCounterpart,
+  demoMessages,
+  demoUserSchool,
   demoListings,
   demoMarketById,
   demoMarketListings,
@@ -52,10 +58,10 @@ import type {
   DiscoveryShelf,
   DraftListing,
   DraftListingsRepository,
-  InboxRepository,
   MarketplaceQuery,
   MarketplaceRepository,
   MarketRepository,
+  MessagingRepository,
   NewListing,
   NewMarket,
   NewWishlistItem,
@@ -64,6 +70,8 @@ import type {
   SessionRepository,
   SessionState,
   StallRepository,
+  StartConversationInput,
+  Unsubscribe,
   WishlistRepository,
 } from "./types";
 
@@ -132,6 +140,7 @@ export class MockMarketplaceRepository implements MarketplaceRepository {
     const listing: Listing = {
       id: newId("listing"),
       schoolId: input.schoolId,
+      ownerId: (await this.store.read<string | null>(StorageKeys.selectedProfile, null)) ?? "demo-user",
       postType: input.postType,
       status: "active",
       title: input.title.trim(),
@@ -167,11 +176,228 @@ export class MockCommunityRepository implements CommunityRepository {
   }
 }
 
-/* -------------------------------------------------------------------- inbox */
+/* ---------------------------------------------------------------- messaging */
 
-export class MockInboxRepository implements InboxRepository {
-  async list(schoolId: string): Promise<InboxThread[]> {
-    return demoInbox.filter((t) => t.schoolId === schoolId);
+/** Stored (dynamic) conversation row for demo mode. */
+interface StoredConversation {
+  id: string;
+  schoolId: string;
+  participants: [string, string];
+  context: { kind: "listing" | "market" | "stall" | "none"; id: string | null };
+  status: "active" | "archived" | "closed";
+  createdAt: string;
+  lastMessageAt: string;
+}
+interface StoredMessage {
+  id: string;
+  conversationId: string;
+  senderId: string | null;
+  type: "text" | "system";
+  body: string;
+  createdAt: string;
+}
+
+/** Deterministic mock messaging over the local KV store + static demo seed. */
+export class MockMessagingRepository implements MessagingRepository {
+  constructor(private readonly store: JsonStore) {}
+
+  private me(): Promise<string> {
+    return currentUser(this.store);
+  }
+  private stored(): Promise<StoredConversation[]> {
+    return this.store.read<StoredConversation[]>(StorageKeys.demoConversations, []);
+  }
+  private storedMsgs(): Promise<StoredMessage[]> {
+    return this.store.read<StoredMessage[]>(StorageKeys.demoMessages, []);
+  }
+  private reads(): Promise<Record<string, string>> {
+    return this.store.read<Record<string, string>>(StorageKeys.demoReadState, {});
+  }
+  private blocks(): Promise<string[]> {
+    return this.store.read<string[]>(StorageKeys.demoBlocks, []);
+  }
+
+  /** Static demo conversations for the current user, mapped to StoredConversation. */
+  private seedFor(uid: string): StoredConversation[] {
+    return demoConversations
+      .filter((c) => c.a === uid || c.b === uid)
+      .map((c) => {
+        const msgs = demoMessages[c.id] ?? [];
+        const last = msgs[msgs.length - 1];
+        return {
+          id: c.id,
+          schoolId: c.schoolId,
+          participants: [c.a, c.b] as [string, string],
+          context: c.context,
+          status: "active" as const,
+          createdAt: msgs[0]?.createdAt ?? new Date().toISOString(),
+          lastMessageAt: last?.createdAt ?? new Date().toISOString(),
+        };
+      });
+  }
+
+  private async allConversations(uid: string): Promise<StoredConversation[]> {
+    const dynamic = (await this.stored()).filter((c) => c.participants.includes(uid));
+    const seedIds = new Set(dynamic.map((c) => c.id));
+    const seed = this.seedFor(uid).filter((c) => !seedIds.has(c.id));
+    return [...dynamic, ...seed];
+  }
+
+  private async messagesFor(conversationId: string): Promise<StoredMessage[]> {
+    const seeded: StoredMessage[] = (demoMessages[conversationId] ?? []).map((m, i) => ({
+      id: `${conversationId}:seed:${i}`,
+      conversationId,
+      senderId: m.senderId,
+      type: m.senderId === null ? "system" : "text",
+      body: m.body,
+      createdAt: m.createdAt,
+    }));
+    const dynamic = (await this.storedMsgs()).filter((m) => m.conversationId === conversationId);
+    return [...seeded, ...dynamic].sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
+  }
+
+  private resolveContext(kind: "listing" | "market" | "stall" | "none", id: string | null): ConversationContext {
+    if (kind === "listing" && id) {
+      const l = demoListings.find((x) => x.id === id);
+      return { kind, id, label: l?.title ?? "Listing", subtitle: l ? "Listing" : "Listing no longer available", image: l?.images[0] ?? null, unavailable: !l };
+    }
+    if (kind === "market" && id) {
+      const m = demoMarketById(id);
+      return { kind, id, label: m?.title ?? "Market", subtitle: m ? "Temporary market" : "Market ended", image: m?.coverImage ?? null, unavailable: !m };
+    }
+    if (kind === "stall" && id) {
+      const s = demoStallById(id);
+      return { kind, id, label: s ? `${s.owner.displayName}'s stall` : "Stall", subtitle: "Student stall", image: null, unavailable: !s };
+    }
+    return { kind: "none", id: null, label: "Direct message", subtitle: null, image: null, unavailable: false };
+  }
+
+  private async toConversation(c: StoredConversation, uid: string, msgs: StoredMessage[]): Promise<Conversation> {
+    const otherId = c.participants.find((p) => p !== uid) ?? c.participants[0];
+    // Read state is keyed per-user so each participant tracks their own unread.
+    const lastRead = (await this.reads())[`${uid}:${c.id}`];
+    const unread = msgs.filter((m) => m.senderId !== uid && (!lastRead || Date.parse(m.createdAt) > Date.parse(lastRead))).length;
+    const last = msgs[msgs.length - 1];
+    return {
+      id: c.id,
+      schoolId: c.schoolId,
+      counterpart: demoCounterpart(otherId),
+      context: this.resolveContext(c.context.kind, c.context.id),
+      lastPreview: last ? (last.type === "system" ? last.body : last.body) : "",
+      lastMessageAt: c.lastMessageAt,
+      unread,
+    };
+  }
+
+  async listConversations(schoolId: string): Promise<Conversation[]> {
+    const uid = await this.me();
+    const convs = (await this.allConversations(uid)).filter((c) => c.schoolId === schoolId);
+    const out = await Promise.all(convs.map(async (c) => this.toConversation(c, uid, await this.messagesFor(c.id))));
+    return out.sort((a, b) => Date.parse(b.lastMessageAt) - Date.parse(a.lastMessageAt));
+  }
+
+  async getConversation(id: string): Promise<ConversationDetail | null> {
+    const uid = await this.me();
+    const c = (await this.allConversations(uid)).find((x) => x.id === id);
+    if (!c) return null;
+    const rows = await this.messagesFor(id);
+    const messages: Message[] = rows.map((m) => ({
+      id: m.id,
+      conversationId: m.conversationId,
+      senderId: m.senderId,
+      type: m.type,
+      body: m.body,
+      createdAt: m.createdAt,
+      editedAt: null,
+      deletedAt: null,
+      mine: m.senderId === uid,
+    }));
+    const conversation = await this.toConversation(c, uid, rows);
+    const otherId = c.participants.find((p) => p !== uid) ?? c.participants[0];
+    const blockedByMe = (await this.blocks()).includes(otherId);
+    const canSend = c.status === "active" && !blockedByMe;
+    return { conversation, messages, canSend, blockedByMe };
+  }
+
+  async startConversation(input: StartConversationInput): Promise<string> {
+    const uid = await this.me();
+    if (input.otherUserId === uid) throw new Error("cannot_message_self");
+    if ((await this.blocks()).includes(input.otherUserId)) throw new Error("blocked");
+    const kind = input.listingId ? "listing" : input.marketId ? "market" : input.stallId ? "stall" : "none";
+    const ctxId = input.listingId ?? input.marketId ?? input.stallId ?? null;
+    const key = [uid, input.otherUserId].sort().join(":") + ":" + kind + ":" + (ctxId ?? "direct");
+    const existing = (await this.allConversations(uid)).find(
+      (c) => c.status === "active" && [c.participants[0], c.participants[1]].sort().join(":") + ":" + c.context.kind + ":" + (c.context.id ?? "direct") === key,
+    );
+    if (existing) return existing.id;
+
+    const schoolId = demoUserSchool(uid) ?? demoUserSchool(input.otherUserId) ?? "school-uni";
+    const now = new Date().toISOString();
+    const conv: StoredConversation = {
+      id: newId("conv"),
+      schoolId,
+      participants: [uid, input.otherUserId],
+      context: { kind, id: ctxId },
+      status: "active",
+      createdAt: now,
+      lastMessageAt: now,
+    };
+    await this.store.write(StorageKeys.demoConversations, [conv, ...(await this.stored())]);
+    const sys: StoredMessage = { id: newId("msg"), conversationId: conv.id, senderId: null, type: "system", body: "Conversation started", createdAt: now };
+    await this.store.write(StorageKeys.demoMessages, [...(await this.storedMsgs()), sys]);
+    return conv.id;
+  }
+
+  async sendMessage(conversationId: string, body: string): Promise<Message> {
+    const uid = await this.me();
+    const detail = await this.getConversation(conversationId);
+    if (!detail) throw new Error("conversation_not_found");
+    if (!detail.canSend) throw new Error("cannot_send");
+    const now = new Date().toISOString();
+    const row: StoredMessage = { id: newId("msg"), conversationId, senderId: uid, type: "text", body: body.trim(), createdAt: now };
+    await this.store.write(StorageKeys.demoMessages, [...(await this.storedMsgs()), row]);
+    // Bump lastMessageAt for a dynamic conversation (seed rows derive it from messages).
+    const stored = await this.stored();
+    if (stored.some((c) => c.id === conversationId)) {
+      await this.store.write(
+        StorageKeys.demoConversations,
+        stored.map((c) => (c.id === conversationId ? { ...c, lastMessageAt: now } : c)),
+      );
+    }
+    return { id: row.id, conversationId, senderId: uid, type: "text", body: row.body, createdAt: now, editedAt: null, deletedAt: null, mine: true };
+  }
+
+  async markRead(conversationId: string): Promise<void> {
+    const uid = await this.me();
+    const reads = await this.reads();
+    await this.store.write(StorageKeys.demoReadState, { ...reads, [`${uid}:${conversationId}`]: new Date().toISOString() });
+  }
+
+  async unreadTotal(): Promise<number> {
+    const uid = await this.me();
+    const convs = await this.allConversations(uid);
+    let total = 0;
+    for (const c of convs) total += (await this.toConversation(c, uid, await this.messagesFor(c.id))).unread;
+    return total;
+  }
+
+  async block(userId: string): Promise<void> {
+    const blocks = await this.blocks();
+    if (!blocks.includes(userId)) await this.store.write(StorageKeys.demoBlocks, [userId, ...blocks]);
+  }
+  async unblock(userId: string): Promise<void> {
+    await this.store.write(StorageKeys.demoBlocks, (await this.blocks()).filter((b) => b !== userId));
+  }
+
+  watchConversation(id: string, onChange: (detail: ConversationDetail) => void): Unsubscribe {
+    // Poll-based refresh (no fake realtime). The demo store only changes from this
+    // device, so a gentle interval keeps the open thread fresh after local sends.
+    const timer = setInterval(() => {
+      void this.getConversation(id).then((d) => {
+        if (d) onChange(d);
+      });
+    }, 4000);
+    return () => clearInterval(timer);
   }
 }
 
@@ -643,7 +869,7 @@ export function createMockRepositories(kv: KeyValueStore): Repositories {
     session: new MockSessionRepository(store),
     marketplace: new MockMarketplaceRepository(store),
     community: new MockCommunityRepository(),
-    inbox: new MockInboxRepository(),
+    messaging: new MockMessagingRepository(store),
     saved: new MockSavedListingsRepository(store),
     drafts: new MockDraftListingsRepository(store),
     wishlist: new MockWishlistRepository(store),

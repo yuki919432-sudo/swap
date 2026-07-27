@@ -25,6 +25,7 @@ export function rowToListing(row: ListingRow, images: ImageRef[], owner: OwnerPr
   return {
     id: row.id,
     schoolId: row.school_id,
+    ownerId: row.owner_id,
     postType: row.post_type,
     status: row.status,
     title: row.title,

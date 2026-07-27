@@ -20,7 +20,8 @@ insert into allow values
   ('public','get_membership_status'), ('public','redeem_invitation'),
   ('public','resolve_roster_membership'), ('public','request_membership'),
   ('public','review_membership_request'), ('public','set_membership_status'),
-  ('public','verify_email_otp'), ('public','get_email_delivery_status');
+  ('public','verify_email_otp'), ('public','get_email_delivery_status'),
+  ('public','start_conversation'), ('public','conversation_unread_counts');
 
 -- ---- app.write_audit is not executable by authenticated -------------------
 select ok(

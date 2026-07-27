@@ -13,6 +13,7 @@ import type {
   ListingStatus,
   MarketStatus,
   MembershipStatus,
+  MessageType,
   VerificationMethod,
   WishlistStatus,
   WishlistUrgency,
@@ -55,6 +56,8 @@ export interface OwnerPreview {
 export interface Listing {
   id: string;
   schoolId: string;
+  /** The owner's user id — who "Message owner" reaches. */
+  ownerId: string;
   postType: ListingPostType;
   status: ListingStatus;
   title: string;
@@ -173,13 +176,68 @@ export interface MarketDetail {
   amSeller: boolean;
 }
 
-export interface InboxThread {
+/* --------------------------------------------------------------- Messaging */
+
+/** The other person in a 1:1 conversation (owner preview + their user id). */
+export interface Counterpart {
+  userId: string;
+  displayName: string;
+  avatarEmoji: string;
+  verified: boolean;
+}
+
+/** What a conversation is "about" — a listing, market, or stall (or nothing). */
+export interface ConversationContext {
+  kind: "listing" | "market" | "stall" | "none";
+  id: string | null;
+  /** A short title, e.g. the listing/market title or the stall owner's name. */
+  label: string;
+  subtitle: string | null;
+  image: ImageRef | null;
+  /** True when the referenced item is gone (deleted/traded/ended) — show inactive. */
+  unavailable: boolean;
+}
+
+/** A conversation summary for the Inbox list. */
+export interface Conversation {
   id: string;
   schoolId: string;
-  counterpart: OwnerPreview;
-  /** Context label, e.g. a listing title. */
-  contextLabel: string;
-  preview: string;
+  counterpart: Counterpart;
+  context: ConversationContext;
+  /** Preview of the latest message (may be a system line). */
+  lastPreview: string;
+  lastMessageAt: string;
+  /** This viewer's unread count for the conversation. */
   unread: number;
-  lastAt: string;
 }
+
+/** A single message in a thread. */
+export interface Message {
+  id: string;
+  conversationId: string;
+  /** Null for system messages. */
+  senderId: string | null;
+  type: MessageType;
+  body: string;
+  createdAt: string;
+  editedAt: string | null;
+  deletedAt: string | null;
+  /** True when the current viewer authored it. */
+  mine: boolean;
+  /** Optimistic-send lifecycle (client-only; never persisted). */
+  pending?: boolean;
+  failed?: boolean;
+}
+
+/** A conversation with its messages + viewer-scoped send/block state. */
+export interface ConversationDetail {
+  conversation: Conversation;
+  messages: Message[];
+  /** False when a block (either direction) or an inactive conversation stops sending. */
+  canSend: boolean;
+  /** True when the viewer has blocked the counterpart. */
+  blockedByMe: boolean;
+}
+
+/** Kept as the Inbox list-item alias for backward compatibility with the tab. */
+export type InboxThread = Conversation;

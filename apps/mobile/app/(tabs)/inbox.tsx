@@ -1,103 +1,93 @@
 import { useCallback, useState } from "react";
 import { View } from "react-native";
-import { useFocusEffect } from "expo-router";
-import { Screen, AppText, Card, Avatar, DemoBanner, EmptyState, ComingSoonSheet } from "../../src/components";
+import { useFocusEffect, useRouter } from "expo-router";
+import { Screen, AppText, Card, Avatar, DemoBanner, EmptyState, Badge } from "../../src/components";
 import { useTheme } from "../../src/theme";
 import { useRepositories } from "../../src/data/repositories";
 import { useSession } from "../../src/session/SessionProvider";
-import type { InboxThread } from "../../src/domain/models";
+import type { Conversation } from "../../src/domain/models";
 import { timeAgo } from "../../src/lib/id";
+
+type LoadState = "loading" | "ready" | "error";
 
 export default function InboxScreen() {
   const theme = useTheme();
+  const router = useRouter();
   const repos = useRepositories();
   const { session } = useSession();
-  const [threads, setThreads] = useState<InboxThread[]>([]);
-  const [sheet, setSheet] = useState(false);
+  const [threads, setThreads] = useState<Conversation[]>([]);
+  const [state, setState] = useState<LoadState>("loading");
   const schoolId = session?.school.id;
+
+  const load = useCallback(async () => {
+    if (!schoolId) return;
+    setState("loading");
+    try {
+      setThreads(await repos.messaging.listConversations(schoolId));
+      setState("ready");
+    } catch {
+      setState("error");
+    }
+  }, [repos, schoolId]);
 
   useFocusEffect(
     useCallback(() => {
-      if (schoolId) repos.inbox.list(schoolId).then(setThreads);
-    }, [repos, schoolId]),
+      load();
+    }, [load]),
   );
 
   return (
     <Screen scroll>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: theme.spacing.sm }}>
-        <AppText variant="title1">Inbox</AppText>
+        <AppText variant="title1">Messages</AppText>
         <DemoBanner compact />
       </View>
 
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          gap: theme.spacing.sm,
-          backgroundColor: theme.colors.infoSoft,
-          borderRadius: theme.radii.md,
-          padding: theme.spacing.md,
-          marginTop: theme.spacing.md,
-        }}
-      >
-        <AppText>💬</AppText>
-        <AppText variant="caption" color="textMuted" style={{ flex: 1 }}>
-          This is a preview. Messaging is not live in the demo — no real conversations are sent.
+      {state === "loading" ? (
+        <AppText variant="callout" color="textMuted" style={{ marginTop: theme.spacing.xl }}>
+          Loading your conversations…
         </AppText>
-      </View>
-
-      {threads.length === 0 ? (
-        <EmptyState emoji="📭" title="No messages yet" message="When messaging launches, your conversations about listings will appear here." />
+      ) : state === "error" ? (
+        <EmptyState
+          emoji="⚠️"
+          title="Couldn't load messages"
+          message="Something went wrong. Pull to refresh or try again."
+          action={<AppText color="accent" onPress={load}>Retry</AppText>}
+        />
+      ) : threads.length === 0 ? (
+        <EmptyState
+          emoji="💬"
+          title="No messages yet"
+          message="Say hi about a listing, a stall, or a market and your conversations show up here."
+        />
       ) : (
         <View style={{ gap: theme.spacing.sm, marginTop: theme.spacing.md }}>
           {threads.map((t) => (
-            <Card key={t.id} onPress={() => setSheet(true)} elevation="none">
+            <Card key={t.id} onPress={() => router.push(`/messages/${t.id}`)} elevation="none">
               <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.md }}>
                 <Avatar emoji={t.counterpart.avatarEmoji} />
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                     <AppText variant="bodyStrong">{t.counterpart.displayName}</AppText>
                     <AppText variant="caption" color="textFaint">
-                      {timeAgo(t.lastAt)}
+                      {timeAgo(t.lastMessageAt)}
                     </AppText>
                   </View>
-                  <AppText variant="caption" color="accent" numberOfLines={1}>
-                    {t.contextLabel}
-                  </AppText>
-                  <AppText variant="callout" color="textMuted" numberOfLines={1}>
-                    {t.preview}
+                  {t.context.kind !== "none" ? (
+                    <AppText variant="caption" color={t.context.unavailable ? "textFaint" : "accent"} numberOfLines={1}>
+                      {t.context.unavailable ? `${t.context.label} · unavailable` : t.context.label}
+                    </AppText>
+                  ) : null}
+                  <AppText variant="callout" color={t.unread > 0 ? "text" : "textMuted"} numberOfLines={1}>
+                    {t.lastPreview}
                   </AppText>
                 </View>
-                {t.unread > 0 ? (
-                  <View
-                    style={{
-                      minWidth: 22,
-                      height: 22,
-                      borderRadius: 11,
-                      paddingHorizontal: 6,
-                      backgroundColor: theme.colors.accent,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <AppText variant="micro" color="onAccent">
-                      {t.unread}
-                    </AppText>
-                  </View>
-                ) : null}
+                {t.unread > 0 ? <Badge label={`${t.unread}`} tone="accent" /> : null}
               </View>
             </Card>
           ))}
         </View>
       )}
-
-      <ComingSoonSheet
-        visible={sheet}
-        onClose={() => setSheet(false)}
-        emoji="💬"
-        title="Messaging is coming soon"
-        message="Real-time conversations arrive in a later milestone. In the demo we never send or store real messages."
-      />
     </Screen>
   );
 }

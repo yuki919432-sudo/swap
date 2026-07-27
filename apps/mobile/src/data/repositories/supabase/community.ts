@@ -1,20 +1,14 @@
 /**
- * Community + Inbox are out of scope for the marketplace checkpoint. Real
- * implementations arrive with the community/messaging milestones; for now these
- * return empty so the screens render their (unchanged) empty states against the
- * real backend rather than showing synthetic demo content.
+ * Community is out of scope for the current checkpoints; the real implementation
+ * arrives with the community milestone. For now it returns empty so the screen
+ * renders its (unchanged) empty state against the real backend. (Messaging now has
+ * a real SupabaseMessagingRepository — see ./messaging.)
  */
-import type { CommunityItem, InboxThread } from "../../../domain/models";
-import type { CommunityRepository, InboxRepository } from "../types";
+import type { CommunityItem } from "../../../domain/models";
+import type { CommunityRepository } from "../types";
 
 export class SupabaseCommunityRepository implements CommunityRepository {
   async list(): Promise<CommunityItem[]> {
-    return [];
-  }
-}
-
-export class SupabaseInboxRepository implements InboxRepository {
-  async list(): Promise<InboxThread[]> {
     return [];
   }
 }

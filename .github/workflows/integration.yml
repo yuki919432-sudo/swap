@@ -37,7 +37,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Soft-fail: this action resolves the "latest" release via the GitHub API and
+      # intermittently hits "rate limit exceeded". Don't let that abort the job —
+      # the resilient fallback below installs the CLI via npx instead.
       - uses: supabase/setup-cli@v1
+        continue-on-error: true
         with:
           version: latest
 

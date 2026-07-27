@@ -9,13 +9,15 @@
 import type { ItemCondition, ListingPostType, ListingStatus, MarketStatus, WishlistStatus, WishlistUrgency, WishlistVisibility } from "@swap/types";
 import type {
   CommunityItem,
+  Conversation,
+  ConversationDetail,
   DemoProfile,
   DemoSchool,
-  InboxThread,
   ImageRef,
   Listing,
   Market,
   MarketDetail,
+  Message,
   OwnerPreview,
   Stall,
   StallDetail,
@@ -91,10 +93,41 @@ export interface CommunityRepository {
   list(schoolId: string): Promise<CommunityItem[]>;
 }
 
-/* -------------------------------------------------------------------- inbox */
+/* ---------------------------------------------------------------- messaging */
 
-export interface InboxRepository {
-  list(schoolId: string): Promise<InboxThread[]>;
+export type Unsubscribe = () => void;
+
+/** The fields needed to start (or reuse) a conversation. */
+export interface StartConversationInput {
+  otherUserId: string;
+  listingId?: string | null;
+  marketId?: string | null;
+  stallId?: string | null;
+}
+
+export interface MessagingRepository {
+  /** The caller's conversations for a school, latest activity first (the Inbox). */
+  listConversations(schoolId: string): Promise<Conversation[]>;
+  /** A conversation with its messages + viewer send/block state. */
+  getConversation(id: string): Promise<ConversationDetail | null>;
+  /** Start or reuse a 1:1 conversation; returns the conversation id. */
+  startConversation(input: StartConversationInput): Promise<string>;
+  /** Send a text message; the returned message is the reconciled server row. */
+  sendMessage(conversationId: string, body: string): Promise<Message>;
+  /** Mark the conversation read up to the latest message for the caller. */
+  markRead(conversationId: string): Promise<void>;
+  /** The caller's total unread count across conversations (for the tab badge). */
+  unreadTotal(): Promise<number>;
+  /** Block a user (prevents new conversations + sends). schoolId scopes the block. */
+  block(userId: string, schoolId: string): Promise<void>;
+  /** Remove a block the caller created. */
+  unblock(userId: string): Promise<void>;
+  /**
+   * Poll-based change subscription — NOT fake realtime. Calls onChange with a
+   * fresh detail on an interval; returns an unsubscribe. (A Supabase Realtime
+   * upgrade can replace this behind the same signature later.)
+   */
+  watchConversation(id: string, onChange: (detail: ConversationDetail) => void): Unsubscribe;
 }
 
 /* ----------------------------------------------------------- saved listings */
@@ -252,7 +285,7 @@ export interface Repositories {
   session: SessionRepository;
   marketplace: MarketplaceRepository;
   community: CommunityRepository;
-  inbox: InboxRepository;
+  messaging: MessagingRepository;
   saved: SavedListingsRepository;
   drafts: DraftListingsRepository;
   wishlist: WishlistRepository;

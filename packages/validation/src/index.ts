@@ -186,10 +186,27 @@ export type CreateCommunityPostInput = z.infer<typeof createCommunityPostSchema>
 
 /* ------------------------------------------------------- Messaging / reports */
 
+/** Start (or reuse) a 1:1 conversation, optionally about a listing/market/stall. */
+export const startConversationSchema = z
+  .object({
+    otherUserId: uuid,
+    listingId: uuid.nullable().optional(),
+    marketId: uuid.nullable().optional(),
+    stallId: uuid.nullable().optional(),
+  })
+  .refine(
+    (v) => [v.listingId, v.marketId, v.stallId].filter((x) => x !== null && x !== undefined).length <= 1,
+    { message: "conversation_context_must_be_single", path: ["listingId"] },
+  );
+export type StartConversationInput = z.infer<typeof startConversationSchema>;
+
 export const sendMessageSchema = z.object({
   conversationId: uuid,
   body: mediumText,
 });
+export type SendMessageInput = z.infer<typeof sendMessageSchema>;
+
+export const editMessageSchema = z.object({ messageId: uuid, body: mediumText });
 
 export const reportSchema = z.object({
   targetType: zEnum(REPORT_TARGET_TYPE),

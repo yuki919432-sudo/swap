@@ -5,6 +5,7 @@ import type { Listing } from "../../domain/models";
 const base = (over: Partial<Listing>): Listing => ({
   id: "x",
   schoolId: "s1",
+  ownerId: "owner1",
   postType: "give",
   status: "active",
   title: "Item",
