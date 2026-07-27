@@ -209,10 +209,12 @@ export class SupabaseMarketRepository implements MarketRepository {
     const { data: market, error: mErr } = await this.client.from("markets").select("school_id").eq("id", marketId).maybeSingle();
     if (mErr) throw new Error(mErr.message);
     if (!market) throw new Error("market_not_found");
+    // Plain insert (idempotent): market_sellers has no UPDATE policy by design, so an
+    // upsert's ON CONFLICT DO UPDATE path would be RLS-denied. A duplicate = already joined.
     const { error } = await this.client
       .from("market_sellers")
-      .upsert({ market_id: marketId, school_id: (market as { school_id: string }).school_id, user_id: uid }, { onConflict: "market_id,user_id" });
-    if (error) throw new Error(error.message);
+      .insert({ market_id: marketId, school_id: (market as { school_id: string }).school_id, user_id: uid });
+    if (error && error.code !== "23505") throw new Error(error.message);
   }
 
   async leave(marketId: string): Promise<void> {
@@ -228,11 +230,12 @@ export class SupabaseMarketRepository implements MarketRepository {
     const { data: market, error: mErr } = await this.client.from("markets").select("school_id").eq("id", marketId).maybeSingle();
     if (mErr) throw new Error(mErr.message);
     if (!market) throw new Error("market_not_found");
-    const { error } = await this.client.from("market_listings").upsert(
-      { market_id: marketId, school_id: (market as { school_id: string }).school_id, listing_id: listingId, added_by: uid },
-      { onConflict: "market_id,listing_id" },
-    );
-    if (error) throw new Error(error.message);
+    // Plain insert (idempotent): market_listings has no UPDATE policy by design, so an
+    // upsert's ON CONFLICT DO UPDATE path would be RLS-denied. A duplicate = already added.
+    const { error } = await this.client
+      .from("market_listings")
+      .insert({ market_id: marketId, school_id: (market as { school_id: string }).school_id, listing_id: listingId, added_by: uid });
+    if (error && error.code !== "23505") throw new Error(error.message);
   }
 
   async removeListing(marketId: string, listingId: string): Promise<void> {
