@@ -82,6 +82,22 @@ export class SupabaseMarketplaceRepository implements MarketplaceRepository {
     return Promise.all(((data ?? []) as unknown as ListingWithRels[]).map((r) => this.toListing(r)));
   }
 
+  async listMine(schoolId: string): Promise<Listing[]> {
+    const { data: userData } = await this.client.auth.getUser();
+    const uid = userData.user?.id;
+    if (!uid) return [];
+    const { data, error } = await this.client
+      .from("listings")
+      .select(SELECT)
+      .eq("school_id", schoolId)
+      .eq("owner_id", uid)
+      .eq("status", "active")
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return Promise.all(((data ?? []) as unknown as ListingWithRels[]).map((r) => this.toListing(r)));
+  }
+
   async getById(id: string): Promise<Listing | null> {
     const { data, error } = await this.client.from("listings").select(SELECT).eq("id", id).is("deleted_at", null).maybeSingle();
     if (error) throw new Error(error.message);

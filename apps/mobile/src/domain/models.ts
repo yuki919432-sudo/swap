@@ -11,6 +11,7 @@ import type {
   ItemCondition,
   ListingPostType,
   ListingStatus,
+  MarketStatus,
   MembershipStatus,
   VerificationMethod,
   WishlistStatus,
@@ -107,6 +108,8 @@ export interface WishlistItem {
   urgency: WishlistUrgency;
   visibility: WishlistVisibility;
   status: WishlistStatus;
+  /** Owner opted to show this "looking for" request on their public stall. */
+  showOnStall: boolean;
   createdAt: string;
 }
 
@@ -117,6 +120,57 @@ export interface WishlistMatch {
   score: number;
   createdAt: string;
   notified: boolean;
+}
+
+/* --------------------------------------------------------- Campus markets */
+
+/** A lightweight student stall (a casual profile over a student's listings). */
+export interface Stall {
+  id: string;
+  schoolId: string;
+  userId: string;
+  owner: OwnerPreview;
+  description: string | null;
+  createdAt: string;
+  activeCount: number;
+}
+
+/** A stall with its content, for the stall detail / My Stall screens. */
+export interface StallDetail {
+  stall: Stall;
+  listings: Listing[];
+  breakdown: Record<ListingPostType, number>;
+  visibleWishlist: WishlistItem[];
+}
+
+/** A themed temporary market. */
+export interface Market {
+  id: string;
+  schoolId: string;
+  hostUserId: string;
+  host: OwnerPreview;
+  hostLabel: string | null;
+  title: string;
+  description: string | null;
+  coverImage: ImageRef | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  location: string | null;
+  handoffInstructions: string | null;
+  allowedCategories: string[];
+  allowsRegulated: boolean;
+  status: MarketStatus;
+  createdAt: string;
+  sellerCount: number;
+  listingCount: number;
+}
+
+/** A market with its participating listings + viewer participation flags. */
+export interface MarketDetail {
+  market: Market;
+  listings: Listing[];
+  amHost: boolean;
+  amSeller: boolean;
 }
 
 export interface InboxThread {

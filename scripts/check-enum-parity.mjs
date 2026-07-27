@@ -45,6 +45,8 @@ const ENUM_MAP = {
   WISHLIST_URGENCY: "wishlist_urgency",
   WISHLIST_STATUS: "wishlist_status",
   WISHLIST_VISIBILITY: "wishlist_visibility",
+  MARKET_STATUS: "market_status",
+  MARKET_CREATION_POLICY: "market_creation_policy",
 };
 
 let checks = 0;

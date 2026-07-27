@@ -225,6 +225,16 @@ export type WishlistStatus = (typeof WISHLIST_STATUS)[number];
 export const WISHLIST_VISIBILITY = ["school"] as const;
 export type WishlistVisibility = (typeof WISHLIST_VISIBILITY)[number];
 
+/* -------------------------------------------------------- Campus markets */
+
+/** Temporary-market lifecycle. */
+export const MARKET_STATUS = ["upcoming", "active", "ended", "cancelled"] as const;
+export type MarketStatus = (typeof MARKET_STATUS)[number];
+
+/** Per-school policy for who may create a temporary market. */
+export const MARKET_CREATION_POLICY = ["verified_students", "clubs_only", "moderators_only"] as const;
+export type MarketCreationPolicy = (typeof MARKET_CREATION_POLICY)[number];
+
 /** Marketplace categories seeded at bootstrap; schools may enable/disable per-school. */
 export const DEFAULT_CATEGORIES = [
   "textbooks",

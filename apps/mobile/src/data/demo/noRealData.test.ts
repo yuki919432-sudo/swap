@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { demoSchools, demoProfiles, demoListings, demoCommunity, demoInbox, demoWishlist } from ".";
+import { demoSchools, demoProfiles, demoListings, demoCommunity, demoInbox, demoWishlist, demoStalls, demoMarkets } from ".";
 
-const everything = JSON.stringify({ demoSchools, demoProfiles, demoListings, demoCommunity, demoInbox, demoWishlist });
+const everything = JSON.stringify({ demoSchools, demoProfiles, demoListings, demoCommunity, demoInbox, demoWishlist, demoStalls, demoMarkets });
 
 describe("demo fixtures contain no real school or student data", () => {
   it("contains no email addresses", () => {

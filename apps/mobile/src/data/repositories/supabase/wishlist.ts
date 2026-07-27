@@ -23,6 +23,7 @@ interface WishlistRow {
   urgency: WishlistUrgency;
   visibility: WishlistVisibility;
   status: WishlistStatus;
+  show_on_stall: boolean;
   created_at: string;
 }
 
@@ -39,6 +40,7 @@ const toItem = (r: WishlistRow): WishlistItem => ({
   urgency: r.urgency,
   visibility: r.visibility,
   status: r.status,
+  showOnStall: r.show_on_stall,
   createdAt: r.created_at,
 });
 
@@ -100,6 +102,11 @@ export class SupabaseWishlistRepository implements WishlistRepository {
 
   async updateStatus(id: string, status: WishlistStatus): Promise<void> {
     const { error } = await this.client.from("wishlist_items").update({ status }).eq("id", id);
+    if (error) throw new Error(error.message);
+  }
+
+  async setShowOnStall(id: string, show: boolean): Promise<void> {
+    const { error } = await this.client.from("wishlist_items").update({ show_on_stall: show }).eq("id", id);
     if (error) throw new Error(error.message);
   }
 

@@ -34,6 +34,7 @@ const wish = (over: Partial<WishlistItem>): WishlistItem => ({
   urgency: "normal",
   visibility: "school",
   status: "active",
+  showOnStall: false,
   createdAt: new Date().toISOString(),
   ...over,
 });

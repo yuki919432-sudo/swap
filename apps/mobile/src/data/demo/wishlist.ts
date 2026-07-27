@@ -21,6 +21,7 @@ export const demoWishlist: WishlistItem[] = [
     urgency: "high",
     visibility: "school",
     status: "active",
+    showOnStall: true,
     createdAt: daysAgo(1),
   },
   {
@@ -36,6 +37,7 @@ export const demoWishlist: WishlistItem[] = [
     urgency: "normal",
     visibility: "school",
     status: "active",
+    showOnStall: false,
     createdAt: daysAgo(2),
   },
   {
@@ -51,6 +53,7 @@ export const demoWishlist: WishlistItem[] = [
     urgency: "low",
     visibility: "school",
     status: "active",
+    showOnStall: true,
     createdAt: daysAgo(3),
   },
   {
@@ -66,6 +69,7 @@ export const demoWishlist: WishlistItem[] = [
     urgency: "high",
     visibility: "school",
     status: "active",
+    showOnStall: false,
     createdAt: daysAgo(1),
   },
   {
@@ -81,6 +85,7 @@ export const demoWishlist: WishlistItem[] = [
     urgency: "normal",
     visibility: "school",
     status: "active",
+    showOnStall: true,
     createdAt: daysAgo(4),
   },
 ];

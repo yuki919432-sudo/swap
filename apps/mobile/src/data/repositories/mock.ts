@@ -5,26 +5,65 @@
  * local persistence (JsonStore). Screens depend on the interfaces, so replacing
  * these with Supabase-backed implementations later requires no screen changes.
  */
-import type { CommunityItem, DemoSchool, InboxThread, Listing, OwnerPreview, WishlistItem, WishlistMatch } from "../../domain/models";
-import type { WishlistStatus } from "@swap/types";
-import { demoCommunity, demoInbox, demoListings, demoProfileById, demoProfilesForSchool, demoProfiles, demoSchoolById, demoSchools, demoWishlist } from "../demo";
+import type {
+  CommunityItem,
+  DemoSchool,
+  InboxThread,
+  Listing,
+  Market,
+  MarketDetail,
+  OwnerPreview,
+  Stall,
+  StallDetail,
+  WishlistItem,
+  WishlistMatch,
+} from "../../domain/models";
+import type { ListingPostType, MarketStatus, WishlistStatus } from "@swap/types";
+import { LISTING_POST_TYPE } from "@swap/types";
+import {
+  type DemoMarket,
+  type DemoStall,
+  demoCommunity,
+  demoInbox,
+  demoListings,
+  demoMarketById,
+  demoMarketListings,
+  demoMarketsForSchool,
+  demoMarketSellers,
+  demoProfileById,
+  demoProfilesForSchool,
+  demoProfiles,
+  demoSchoolById,
+  demoSchools,
+  demoStallById,
+  demoStalls,
+  demoStallsForSchool,
+  demoWishlist,
+} from "../demo";
 import { JsonStore, StorageKeys, type KeyValueStore } from "../storage";
 import { newId } from "../../lib/id";
 import { scoreWishlistMatch, WISHLIST_MATCH_THRESHOLD } from "../../recommendations/scoring";
 import { applyMarketplaceQuery } from "./marketplaceQuery";
+import { buildDiscoveryShelves, buildDemandClusters } from "./campusDiscovery";
 import type {
+  CampusMarketRepository,
   CommunityRepository,
+  DemandCluster,
+  DiscoveryShelf,
   DraftListing,
   DraftListingsRepository,
   InboxRepository,
   MarketplaceQuery,
   MarketplaceRepository,
+  MarketRepository,
   NewListing,
+  NewMarket,
   NewWishlistItem,
   Repositories,
   SavedListingsRepository,
   SessionRepository,
   SessionState,
+  StallRepository,
   WishlistRepository,
 } from "./types";
 
@@ -73,6 +112,13 @@ export class MockMarketplaceRepository implements MarketplaceRepository {
 
   async list(query: MarketplaceQuery): Promise<Listing[]> {
     return applyMarketplaceQuery(await this.allForSchool(query.schoolId), query);
+  }
+  async listMine(schoolId: string): Promise<Listing[]> {
+    const uid = await this.store.read<string | null>(StorageKeys.selectedProfile, null);
+    const me = uid ? demoProfileById(uid) : null;
+    const all = await this.allForSchool(schoolId);
+    // Demo listings carry only an owner NAME; a user's items are those under their name.
+    return me ? all.filter((l) => l.owner.displayName === me.displayName) : all.filter((l) => l.demoLocal);
   }
   async getById(id: string): Promise<Listing | null> {
     const published = await this.store.read<Listing[]>(StorageKeys.publishedDemoListings, []);
@@ -218,6 +264,7 @@ export class MockWishlistRepository implements WishlistRepository {
       urgency: input.urgency,
       visibility: input.visibility,
       status: "active",
+      showOnStall: false,
       createdAt: new Date().toISOString(),
     };
     await this.store.write(StorageKeys.demoWishlist, [item, ...(await this.mine())]);
@@ -228,6 +275,13 @@ export class MockWishlistRepository implements WishlistRepository {
     await this.store.write(
       StorageKeys.demoWishlist,
       items.map((w) => (w.id === id ? { ...w, status } : w)),
+    );
+  }
+  async setShowOnStall(id: string, show: boolean): Promise<void> {
+    const items = await this.mine();
+    await this.store.write(
+      StorageKeys.demoWishlist,
+      items.map((w) => (w.id === id ? { ...w, showOnStall: show } : w)),
     );
   }
   async remove(id: string): Promise<void> {
@@ -252,11 +306,339 @@ export class MockWishlistRepository implements WishlistRepository {
   }
 }
 
+/* --------------------------------------------------------- shared helpers */
+
+/** All active listings for a school in demo mode (locally-published first). */
+async function schoolListings(store: JsonStore, schoolId: string): Promise<Listing[]> {
+  const published = await store.read<Listing[]>(StorageKeys.publishedDemoListings, []);
+  return [...published.filter((l) => l.schoolId === schoolId), ...demoListings.filter((l) => l.schoolId === schoolId)];
+}
+
+/** The current demo user id (the selected profile), or a stable fallback. */
+async function currentUser(store: JsonStore): Promise<string> {
+  return (await store.read<string | null>(StorageKeys.selectedProfile, null)) ?? "demo-user";
+}
+
+const emptyBreakdown = (): Record<ListingPostType, number> =>
+  Object.fromEntries(LISTING_POST_TYPE.map((t) => [t, 0])) as Record<ListingPostType, number>;
+
+/* ------------------------------------------------------------ student stalls */
+
+type LocalStall = { id: string; schoolId: string; userId: string; description: string | null; createdAt: string };
+
+export class MockStallRepository implements StallRepository {
+  constructor(private readonly store: JsonStore) {}
+
+  private localStalls(): Promise<LocalStall[]> {
+    return this.store.read<LocalStall[]>(StorageKeys.demoStalls, []);
+  }
+
+  /** Resolve an owner preview for a stall: demo owner, else the current profile. */
+  private ownerFor(userId: string, demo?: DemoStall): OwnerPreview {
+    if (demo) return demo.owner;
+    const p = demoProfileById(userId);
+    if (p) return { displayName: p.displayName, avatarEmoji: p.avatarEmoji, verified: p.membershipStatus === "verified" };
+    return { displayName: "You", avatarEmoji: "🙂", verified: true };
+  }
+
+  private async listingsForStall(schoolId: string, owner: OwnerPreview): Promise<Listing[]> {
+    const all = await schoolListings(this.store, schoolId);
+    // Demo listings carry only an owner NAME, so a stall's items are those posted
+    // under the same display name (locally-published items included).
+    return all.filter((l) => l.owner.displayName === owner.displayName);
+  }
+
+  private toStall(schoolId: string, userId: string, description: string | null, createdAt: string, listings: Listing[], demo?: DemoStall): Stall {
+    return {
+      id: demo?.id ?? `stall-local-${userId}`,
+      schoolId,
+      userId,
+      owner: this.ownerFor(userId, demo),
+      description,
+      createdAt,
+      activeCount: listings.length,
+    };
+  }
+
+  private async detail(schoolId: string, userId: string, description: string | null, createdAt: string, demo: DemoStall | undefined, includeHiddenWishlist: boolean): Promise<StallDetail> {
+    const owner = this.ownerFor(userId, demo);
+    const listings = await this.listingsForStall(schoolId, owner);
+    const breakdown = emptyBreakdown();
+    for (const l of listings) breakdown[l.postType] += 1;
+    const stall = this.toStall(schoolId, userId, description, createdAt, listings, demo);
+    const visibleWishlist = await this.wishlistFor(schoolId, userId, includeHiddenWishlist);
+    return { stall, listings, breakdown, visibleWishlist };
+  }
+
+  /** A stall owner's "looking for" requests. Others see only opted-in ones. */
+  private async wishlistFor(schoolId: string, userId: string, includeHidden: boolean): Promise<WishlistItem[]> {
+    const mine = await this.store.read<WishlistItem[]>(StorageKeys.demoWishlist, []);
+    const pool = [...mine, ...demoWishlist];
+    return pool.filter(
+      (w) => w.schoolId === schoolId && w.userId === userId && w.status === "active" && (includeHidden || w.showOnStall),
+    );
+  }
+
+  async listForSchool(schoolId: string): Promise<Stall[]> {
+    const locals = (await this.localStalls()).filter((s) => s.schoolId === schoolId);
+    const localUserIds = new Set(locals.map((s) => s.userId));
+    // Locally-opened stalls override the demo stall for the same user.
+    const demos = demoStallsForSchool(schoolId).filter((d) => !localUserIds.has(d.userId));
+    const out: Stall[] = [];
+    for (const d of demos) {
+      const listings = await this.listingsForStall(schoolId, d.owner);
+      out.push(this.toStall(schoolId, d.userId, d.description, d.createdAt, listings, d));
+    }
+    for (const s of locals) {
+      const owner = this.ownerFor(s.userId);
+      const listings = await this.listingsForStall(schoolId, owner);
+      out.push(this.toStall(schoolId, s.userId, s.description, s.createdAt, listings));
+    }
+    return out.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  }
+
+  async getById(id: string): Promise<StallDetail | null> {
+    const demo = demoStallById(id);
+    if (demo) return this.detail(demo.schoolId, demo.userId, demo.description, demo.createdAt, demo, false);
+    const local = (await this.localStalls()).find((s) => s.id === id);
+    if (local) {
+      const viewerIsOwner = (await currentUser(this.store)) === local.userId;
+      return this.detail(local.schoolId, local.userId, local.description, local.createdAt, undefined, viewerIsOwner);
+    }
+    return null;
+  }
+
+  async getByUser(schoolId: string, userId: string): Promise<StallDetail | null> {
+    const viewerIsOwner = (await currentUser(this.store)) === userId;
+    const local = (await this.localStalls()).find((s) => s.schoolId === schoolId && s.userId === userId);
+    if (local) return this.detail(schoolId, userId, local.description, local.createdAt, undefined, viewerIsOwner);
+    const demo = demoStalls.find((s) => s.schoolId === schoolId && s.userId === userId);
+    if (demo) return this.detail(schoolId, userId, demo.description, demo.createdAt, demo, viewerIsOwner);
+    return null;
+  }
+
+  async getMine(schoolId: string): Promise<StallDetail | null> {
+    const uid = await currentUser(this.store);
+    return this.getByUser(schoolId, uid);
+  }
+
+  async open(schoolId: string, description: string | null): Promise<Stall> {
+    const uid = await currentUser(this.store);
+    const locals = await this.localStalls();
+    const existing = locals.find((s) => s.schoolId === schoolId && s.userId === uid);
+    const demo = demoStalls.find((s) => s.schoolId === schoolId && s.userId === uid);
+    const createdAt = existing?.createdAt ?? demo?.createdAt ?? new Date().toISOString();
+    const next: LocalStall = { id: existing?.id ?? demo?.id ?? `stall-local-${uid}`, schoolId, userId: uid, description, createdAt };
+    await this.store.write(StorageKeys.demoStalls, [next, ...locals.filter((s) => s.id !== next.id)]);
+    const owner = this.ownerFor(uid, demo);
+    const listings = await this.listingsForStall(schoolId, owner);
+    return this.toStall(schoolId, uid, description, createdAt, listings, demo);
+  }
+}
+
+/* --------------------------------------------------------- temporary markets */
+
+type LocalMarket = DemoMarket;
+type Participation = { marketId: string; userId: string };
+type Association = { marketId: string; listingId: string; userId: string };
+
+export class MockMarketRepository implements MarketRepository {
+  constructor(private readonly store: JsonStore) {}
+
+  private localMarkets(): Promise<LocalMarket[]> {
+    return this.store.read<LocalMarket[]>(StorageKeys.demoMarkets, []);
+  }
+  private sellers(): Promise<Participation[]> {
+    return this.store.read<Participation[]>(StorageKeys.demoMarketSellers, []);
+  }
+  private assocs(): Promise<Association[]> {
+    return this.store.read<Association[]>(StorageKeys.demoMarketListings, []);
+  }
+
+  private async statusOverrides(): Promise<Record<string, MarketStatus>> {
+    return this.store.read<Record<string, MarketStatus>>("swap.demo.marketStatus", {});
+  }
+
+  private async allMarkets(schoolId: string): Promise<DemoMarket[]> {
+    const overrides = await this.statusOverrides();
+    const locals = await this.localMarkets();
+    const localIds = new Set(locals.map((m) => m.id));
+    const demos = demoMarketsForSchool(schoolId).filter((m) => !localIds.has(m.id));
+    const merged = [...locals.filter((m) => m.schoolId === schoolId), ...demos];
+    return merged.map((m) => (overrides[m.id] ? { ...m, status: overrides[m.id]! } : m));
+  }
+
+  private async toMarket(m: DemoMarket): Promise<Market> {
+    const sellerCount = (await this.allSellers()).filter((s) => s.marketId === m.id).length;
+    const listingCount = (await this.allAssocs()).filter((a) => a.marketId === m.id).length;
+    return {
+      id: m.id,
+      schoolId: m.schoolId,
+      hostUserId: m.hostUserId,
+      host: m.host,
+      hostLabel: m.hostLabel,
+      title: m.title,
+      description: m.description,
+      coverImage: m.coverImage,
+      startsAt: m.startsAt,
+      endsAt: m.endsAt,
+      location: m.location,
+      handoffInstructions: m.handoffInstructions,
+      allowedCategories: m.allowedCategories,
+      allowsRegulated: m.allowsRegulated,
+      status: m.status,
+      createdAt: m.createdAt,
+      sellerCount,
+      listingCount,
+    };
+  }
+
+  private async allSellers(): Promise<Participation[]> {
+    return [...demoMarketSellers, ...(await this.sellers())];
+  }
+  private async allAssocs(): Promise<Association[]> {
+    const removed = await this.store.read<Association[]>("swap.demo.marketListingsRemoved", []);
+    const base = [...demoMarketListings, ...(await this.assocs())];
+    return base.filter((a) => !removed.some((r) => r.marketId === a.marketId && r.listingId === a.listingId));
+  }
+
+  async listForSchool(schoolId: string): Promise<Market[]> {
+    const markets = await this.allMarkets(schoolId);
+    const out = await Promise.all(markets.map((m) => this.toMarket(m)));
+    return out.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  }
+
+  private async findMarket(id: string): Promise<DemoMarket | null> {
+    const overrides = await this.statusOverrides();
+    const local = (await this.localMarkets()).find((m) => m.id === id);
+    const demo = demoMarketById(id);
+    const base = local ?? demo ?? null;
+    if (!base) return null;
+    return overrides[id] ? { ...base, status: overrides[id]! } : base;
+  }
+
+  async getById(id: string): Promise<MarketDetail | null> {
+    const m = await this.findMarket(id);
+    if (!m) return null;
+    const market = await this.toMarket(m);
+    const assocs = (await this.allAssocs()).filter((a) => a.marketId === id);
+    const pool = await schoolListings(this.store, m.schoolId);
+    const listings = assocs.map((a) => pool.find((l) => l.id === a.listingId)).filter((l): l is Listing => l !== undefined);
+    const uid = await currentUser(this.store);
+    const amHost = m.hostUserId === uid;
+    const amSeller = (await this.allSellers()).some((s) => s.marketId === id && s.userId === uid);
+    return { market, listings, amHost, amSeller };
+  }
+
+  async create(input: NewMarket, host: OwnerPreview): Promise<Market> {
+    const uid = await currentUser(this.store);
+    const now = new Date().toISOString();
+    const m: DemoMarket = {
+      id: newId("market"),
+      schoolId: input.schoolId,
+      hostUserId: uid,
+      host,
+      hostLabel: input.hostLabel?.trim() || null,
+      title: input.title.trim(),
+      description: input.description?.trim() || null,
+      coverImage: input.coverImage,
+      startsAt: input.startsAt,
+      endsAt: input.endsAt,
+      location: input.location?.trim() || null,
+      handoffInstructions: input.handoffInstructions?.trim() || null,
+      allowedCategories: input.allowedCategories,
+      allowsRegulated: input.allowsRegulated,
+      status: input.status,
+      createdAt: now,
+    };
+    await this.store.write(StorageKeys.demoMarkets, [m, ...(await this.localMarkets())]);
+    return this.toMarket(m);
+  }
+
+  async setStatus(id: string, status: MarketStatus): Promise<void> {
+    const overrides = await this.statusOverrides();
+    await this.store.write("swap.demo.marketStatus", { ...overrides, [id]: status });
+  }
+
+  async join(marketId: string): Promise<void> {
+    const uid = await currentUser(this.store);
+    const sellers = await this.sellers();
+    if (!sellers.some((s) => s.marketId === marketId && s.userId === uid)) {
+      await this.store.write(StorageKeys.demoMarketSellers, [{ marketId, userId: uid }, ...sellers]);
+    }
+  }
+
+  async leave(marketId: string): Promise<void> {
+    const uid = await currentUser(this.store);
+    const sellers = await this.sellers();
+    await this.store.write(
+      StorageKeys.demoMarketSellers,
+      sellers.filter((s) => !(s.marketId === marketId && s.userId === uid)),
+    );
+  }
+
+  async addListing(marketId: string, listingId: string): Promise<void> {
+    const uid = await currentUser(this.store);
+    const assocs = await this.assocs();
+    if (!assocs.some((a) => a.marketId === marketId && a.listingId === listingId)) {
+      await this.store.write(StorageKeys.demoMarketListings, [{ marketId, listingId, userId: uid }, ...assocs]);
+    }
+    // Un-remove if it was previously removed.
+    const removed = await this.store.read<Association[]>("swap.demo.marketListingsRemoved", []);
+    await this.store.write(
+      "swap.demo.marketListingsRemoved",
+      removed.filter((r) => !(r.marketId === marketId && r.listingId === listingId)),
+    );
+  }
+
+  async removeListing(marketId: string, listingId: string): Promise<void> {
+    const uid = await currentUser(this.store);
+    const assocs = await this.assocs();
+    await this.store.write(
+      StorageKeys.demoMarketListings,
+      assocs.filter((a) => !(a.marketId === marketId && a.listingId === listingId)),
+    );
+    // Demo-seeded associations can't be deleted from the constant, so record a tombstone.
+    const removed = await this.store.read<Association[]>("swap.demo.marketListingsRemoved", []);
+    if (!removed.some((r) => r.marketId === marketId && r.listingId === listingId)) {
+      await this.store.write("swap.demo.marketListingsRemoved", [{ marketId, listingId, userId: uid }, ...removed]);
+    }
+  }
+}
+
+/* ---------------------------------------------------- campus-market discovery */
+
+export class MockCampusMarketRepository implements CampusMarketRepository {
+  constructor(
+    private readonly store: JsonStore,
+    private readonly stalls: MockStallRepository,
+  ) {}
+
+  async shelves(schoolId: string): Promise<DiscoveryShelf[]> {
+    const listings = await schoolListings(this.store, schoolId);
+    const uid = await currentUser(this.store);
+    const mineRaw = await this.store.read<WishlistItem[]>(StorageKeys.demoWishlist, []);
+    const myWishlist = [...mineRaw, ...demoWishlist].filter((w) => w.schoolId === schoolId && w.userId === uid && w.status === "active");
+    return buildDiscoveryShelves({ schoolId, listings, myWishlist });
+  }
+
+  async demand(schoolId: string): Promise<DemandCluster[]> {
+    const mineRaw = await this.store.read<WishlistItem[]>(StorageKeys.demoWishlist, []);
+    const wishlist = [...mineRaw, ...demoWishlist].filter((w) => w.schoolId === schoolId && w.status === "active");
+    return buildDemandClusters(wishlist);
+  }
+
+  async recentStalls(schoolId: string, limit = 8): Promise<Stall[]> {
+    return (await this.stalls.listForSchool(schoolId)).slice(0, limit);
+  }
+}
+
 /* ------------------------------------------------------------- DI factory */
 
 /** Build the full set of mock repositories over a key/value store. */
 export function createMockRepositories(kv: KeyValueStore): Repositories {
   const store = new JsonStore(kv);
+  const stalls = new MockStallRepository(store);
   return {
     session: new MockSessionRepository(store),
     marketplace: new MockMarketplaceRepository(store),
@@ -265,6 +647,9 @@ export function createMockRepositories(kv: KeyValueStore): Repositories {
     saved: new MockSavedListingsRepository(store),
     drafts: new MockDraftListingsRepository(store),
     wishlist: new MockWishlistRepository(store),
+    stalls,
+    markets: new MockMarketRepository(store),
+    campusMarket: new MockCampusMarketRepository(store, stalls),
   };
 }
 
