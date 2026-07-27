@@ -42,6 +42,9 @@ const ENUM_MAP = {
   DEVICE_PLATFORM: "device_platform",
   INVITATION_TYPE: "invitation_type",
   ACCOUNT_STATUS: "account_status",
+  WISHLIST_URGENCY: "wishlist_urgency",
+  WISHLIST_STATUS: "wishlist_status",
+  WISHLIST_VISIBILITY: "wishlist_visibility",
 };
 
 let checks = 0;

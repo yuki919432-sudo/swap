@@ -212,6 +212,19 @@ export const ACCOUNT_STATUS = [
 ] as const;
 export type AccountStatus = (typeof ACCOUNT_STATUS)[number];
 
+/* ------------------------------------------------------------------ Wishlist */
+
+/** Persistent "I'm looking for…" requests (distinct from bookmarked listings). */
+export const WISHLIST_URGENCY = ["low", "normal", "high"] as const;
+export type WishlistUrgency = (typeof WISHLIST_URGENCY)[number];
+
+export const WISHLIST_STATUS = ["active", "fulfilled", "cancelled", "expired"] as const;
+export type WishlistStatus = (typeof WISHLIST_STATUS)[number];
+
+/** Visibility scope. Only school-scoped for now; kept an enum for forward growth. */
+export const WISHLIST_VISIBILITY = ["school"] as const;
+export type WishlistVisibility = (typeof WISHLIST_VISIBILITY)[number];
+
 /** Marketplace categories seeded at bootstrap; schools may enable/disable per-school. */
 export const DEFAULT_CATEGORIES = [
   "textbooks",

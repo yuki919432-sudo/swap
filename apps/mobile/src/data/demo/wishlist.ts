@@ -1,0 +1,86 @@
+/**
+ * Synthetic wishlist items owned by other demo students, so "looking for" requests
+ * surface throughout the product (home, student stalls) in demo mode. The current
+ * demo user's own wishlist starts empty — they create items and matches appear.
+ */
+import type { WishlistItem } from "../../domain/models";
+
+const daysAgo = (d: number): string => new Date(Date.now() - d * 86_400_000).toISOString();
+
+export const demoWishlist: WishlistItem[] = [
+  {
+    id: "w-uni-1",
+    schoolId: "school-uni",
+    userId: "profile-uni-moderator",
+    title: "Looking for a mini fridge",
+    description: "Moving into the dorms and hoping to find a small fridge.",
+    preferredCategory: "dormitory_items",
+    preferredCondition: null,
+    budgetCents: null,
+    swapAcceptable: true,
+    urgency: "high",
+    visibility: "school",
+    status: "active",
+    createdAt: daysAgo(1),
+  },
+  {
+    id: "w-uni-2",
+    schoolId: "school-uni",
+    userId: "profile-uni-moderator",
+    title: "Looking for a Calculus textbook",
+    description: null,
+    preferredCategory: "textbooks",
+    preferredCondition: null,
+    budgetCents: null,
+    swapAcceptable: true,
+    urgency: "normal",
+    visibility: "school",
+    status: "active",
+    createdAt: daysAgo(2),
+  },
+  {
+    id: "w-uni-3",
+    schoolId: "school-uni",
+    userId: "profile-uni-verified",
+    title: "Looking for a road bike",
+    description: "Would love a commuter bike for getting around campus.",
+    preferredCategory: "transportation",
+    preferredCondition: null,
+    budgetCents: null,
+    swapAcceptable: false,
+    urgency: "low",
+    visibility: "school",
+    status: "active",
+    createdAt: daysAgo(3),
+  },
+  {
+    id: "w-hs-1",
+    schoolId: "school-hs",
+    userId: "profile-hs-pending",
+    title: "Looking for a graphing calculator",
+    description: "Need one for pre-calc this semester.",
+    preferredCategory: "electronics",
+    preferredCondition: null,
+    budgetCents: null,
+    swapAcceptable: true,
+    urgency: "high",
+    visibility: "school",
+    status: "active",
+    createdAt: daysAgo(1),
+  },
+  {
+    id: "w-hs-2",
+    schoolId: "school-hs",
+    userId: "profile-hs-verified",
+    title: "Looking for dorm furniture",
+    description: null,
+    preferredCategory: "furniture",
+    preferredCondition: null,
+    budgetCents: null,
+    swapAcceptable: true,
+    urgency: "normal",
+    visibility: "school",
+    status: "active",
+    createdAt: daysAgo(4),
+  },
+];

@@ -24,6 +24,7 @@ export default function RootLayout() {
                   <Stack.Screen name="listing/[id]" options={{ presentation: "card" }} />
                   <Stack.Screen name="create" options={{ presentation: "modal" }} />
                   <Stack.Screen name="my-listings" />
+                  <Stack.Screen name="wishlist" />
                   <Stack.Screen name="settings" />
                 </Stack>
               </SessionProvider>

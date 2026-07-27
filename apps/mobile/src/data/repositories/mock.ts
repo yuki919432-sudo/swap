@@ -5,10 +5,12 @@
  * local persistence (JsonStore). Screens depend on the interfaces, so replacing
  * these with Supabase-backed implementations later requires no screen changes.
  */
-import type { CommunityItem, DemoSchool, InboxThread, Listing, OwnerPreview } from "../../domain/models";
-import { demoCommunity, demoInbox, demoListings, demoProfileById, demoProfilesForSchool, demoProfiles, demoSchoolById, demoSchools } from "../demo";
+import type { CommunityItem, DemoSchool, InboxThread, Listing, OwnerPreview, WishlistItem, WishlistMatch } from "../../domain/models";
+import type { WishlistStatus } from "@swap/types";
+import { demoCommunity, demoInbox, demoListings, demoProfileById, demoProfilesForSchool, demoProfiles, demoSchoolById, demoSchools, demoWishlist } from "../demo";
 import { JsonStore, StorageKeys, type KeyValueStore } from "../storage";
 import { newId } from "../../lib/id";
+import { scoreWishlistMatch, WISHLIST_MATCH_THRESHOLD } from "../../recommendations/scoring";
 import { applyMarketplaceQuery } from "./marketplaceQuery";
 import type {
   CommunityRepository,
@@ -18,10 +20,12 @@ import type {
   MarketplaceQuery,
   MarketplaceRepository,
   NewListing,
+  NewWishlistItem,
   Repositories,
   SavedListingsRepository,
   SessionRepository,
   SessionState,
+  WishlistRepository,
 } from "./types";
 
 /* ----------------------------------------------------------------- session */
@@ -179,6 +183,75 @@ export class MockDraftListingsRepository implements DraftListingsRepository {
   }
 }
 
+/* ---------------------------------------------------------------- wishlist */
+
+export class MockWishlistRepository implements WishlistRepository {
+  constructor(private readonly store: JsonStore) {}
+
+  private mine(): Promise<WishlistItem[]> {
+    return this.store.read<WishlistItem[]>(StorageKeys.demoWishlist, []);
+  }
+  private async currentUserId(): Promise<string> {
+    return (await this.store.read<string | null>(StorageKeys.selectedProfile, null)) ?? "demo-user";
+  }
+
+  async listMine(): Promise<WishlistItem[]> {
+    return (await this.mine()).filter((w) => w.status !== "cancelled");
+  }
+  async listForSchool(schoolId: string): Promise<WishlistItem[]> {
+    const uid = await this.currentUserId();
+    const others = demoWishlist.filter((w) => w.schoolId === schoolId && w.userId !== uid && w.status === "active");
+    const mine = (await this.mine()).filter((w) => w.schoolId === schoolId && w.status === "active");
+    return [...mine, ...others];
+  }
+  async create(input: NewWishlistItem): Promise<WishlistItem> {
+    const item: WishlistItem = {
+      id: newId("wish"),
+      schoolId: input.schoolId,
+      userId: await this.currentUserId(),
+      title: input.title.trim(),
+      description: input.description?.trim() || null,
+      preferredCategory: input.preferredCategory,
+      preferredCondition: input.preferredCondition,
+      budgetCents: input.budgetCents,
+      swapAcceptable: input.swapAcceptable,
+      urgency: input.urgency,
+      visibility: input.visibility,
+      status: "active",
+      createdAt: new Date().toISOString(),
+    };
+    await this.store.write(StorageKeys.demoWishlist, [item, ...(await this.mine())]);
+    return item;
+  }
+  async updateStatus(id: string, status: WishlistStatus): Promise<void> {
+    const items = await this.mine();
+    await this.store.write(
+      StorageKeys.demoWishlist,
+      items.map((w) => (w.id === id ? { ...w, status } : w)),
+    );
+  }
+  async remove(id: string): Promise<void> {
+    await this.store.write(StorageKeys.demoWishlist, (await this.mine()).filter((w) => w.id !== id));
+  }
+  async matchesForMe(): Promise<WishlistMatch[]> {
+    const mine = (await this.mine()).filter((w) => w.status === "active");
+    if (mine.length === 0) return [];
+    const published = await this.store.read<Listing[]>(StorageKeys.publishedDemoListings, []);
+    const bySchool = new Set(mine.map((w) => w.schoolId));
+    const listings = [...published, ...demoListings].filter((l) => bySchool.has(l.schoolId));
+    const matches: WishlistMatch[] = [];
+    for (const w of mine) {
+      for (const l of listings) {
+        const score = scoreWishlistMatch(l, w);
+        if (score >= WISHLIST_MATCH_THRESHOLD) {
+          matches.push({ wishlistItemId: w.id, listingId: l.id, score, createdAt: l.createdAt, notified: false });
+        }
+      }
+    }
+    return matches.sort((a, b) => b.score - a.score);
+  }
+}
+
 /* ------------------------------------------------------------- DI factory */
 
 /** Build the full set of mock repositories over a key/value store. */
@@ -191,6 +264,7 @@ export function createMockRepositories(kv: KeyValueStore): Repositories {
     inbox: new MockInboxRepository(),
     saved: new MockSavedListingsRepository(store),
     drafts: new MockDraftListingsRepository(store),
+    wishlist: new MockWishlistRepository(store),
   };
 }
 

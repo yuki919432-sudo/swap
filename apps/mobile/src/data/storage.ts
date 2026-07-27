@@ -50,10 +50,14 @@ export class JsonStore {
   }
 }
 
-/** Namespaced storage keys (all demo-scoped). */
+/** Namespaced storage keys. Demo-scoped state is prefixed `swap.demo.*`; signals
+ * that apply in both demo and real mode (browsing history) use `swap.*`. */
 export const StorageKeys = {
   selectedProfile: "swap.demo.selectedProfile",
   savedListings: "swap.demo.savedListings",
   drafts: "swap.demo.drafts",
   publishedDemoListings: "swap.demo.publishedListings",
+  demoWishlist: "swap.demo.wishlist",
+  /** Categories the user has recently browsed (a client-side recommendation signal). */
+  browsedCategories: "swap.browsedCategories",
 } as const;
