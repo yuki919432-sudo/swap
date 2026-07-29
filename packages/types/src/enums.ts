@@ -77,6 +77,9 @@ export const OFFER_STATUS = [
   "handoff_pending",
   "completed",
   "disputed",
+  // Added in Phase 1H (0031): the live/actionable state for conversation-centered
+  // offers, distinct from the legacy 'sent'. Appended to preserve DB enum order.
+  "pending",
 ] as const;
 export type OfferStatus = (typeof OFFER_STATUS)[number];
 
@@ -248,6 +251,20 @@ export type MessageType = (typeof MESSAGE_TYPE)[number];
 /** Per-message moderation state (prepared for a future production pipeline). */
 export const MESSAGE_MODERATION_STATUS = ["clear", "flagged", "hidden"] as const;
 export type MessageModerationStatus = (typeof MESSAGE_MODERATION_STATUS)[number];
+
+/* --------------------------------------------------------- Offers & handoff */
+
+/** Kind of exchange an offer proposes. `sale` is modelled but NOT enabled (no payments). */
+export const OFFER_KIND = ["give", "swap", "borrow", "lend", "sale"] as const;
+export type OfferKind = (typeof OFFER_KIND)[number];
+
+/** Handoff coordination state after an offer is accepted. */
+export const HANDOFF_STATUS = ["not_scheduled", "scheduled", "ready", "completed", "cancelled", "disputed"] as const;
+export type HandoffStatus = (typeof HANDOFF_STATUS)[number];
+
+/** Borrow/lend item flow — collection and return are distinct events. */
+export const HANDOFF_STAGE = ["none", "handed_over", "return_due", "returned"] as const;
+export type HandoffStage = (typeof HANDOFF_STAGE)[number];
 
 /** Marketplace categories seeded at bootstrap; schools may enable/disable per-school. */
 export const DEFAULT_CATEGORIES = [

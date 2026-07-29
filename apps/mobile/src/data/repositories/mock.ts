@@ -51,6 +51,7 @@ import { newId } from "../../lib/id";
 import { scoreWishlistMatch, WISHLIST_MATCH_THRESHOLD } from "../../recommendations/scoring";
 import { applyMarketplaceQuery } from "./marketplaceQuery";
 import { buildDiscoveryShelves, buildDemandClusters } from "./campusDiscovery";
+import { MockOfferRepository } from "./mockOffers";
 import type {
   CampusMarketRepository,
   CommunityRepository,
@@ -876,6 +877,7 @@ export function createMockRepositories(kv: KeyValueStore): Repositories {
     stalls,
     markets: new MockMarketRepository(store),
     campusMarket: new MockCampusMarketRepository(store, stalls),
+    offers: new MockOfferRepository(store),
   };
 }
 

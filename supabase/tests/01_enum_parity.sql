@@ -29,7 +29,7 @@ select is(pg_temp.enum_labels('verification_method'),
   'verification_method matches TS');
 
 select is(pg_temp.enum_labels('offer_status'),
-  array['draft','sent','accepted','declined','countered','cancelled','expired','handoff_pending','completed','disputed'],
+  array['draft','sent','accepted','declined','countered','cancelled','expired','handoff_pending','completed','disputed','pending'],
   'offer_status matches TS');
 
 select is(pg_temp.enum_labels('reservation_status'),

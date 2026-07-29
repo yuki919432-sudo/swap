@@ -5,11 +5,12 @@ import { Screen, AppText, Avatar, IconButton, Badge, ModerationNotice, Sheet, Bu
 import { useTheme } from "../../src/theme";
 import { useRepositories } from "../../src/data/repositories";
 import { useSession } from "../../src/session/SessionProvider";
-import type { ConversationDetail, Message } from "../../src/domain/models";
+import type { ConversationDetail, Message, Offer } from "../../src/domain/models";
 import { assessMessage } from "../../src/features/sendMessage";
 import type { ModerationResult } from "../../src/moderation/simulator";
 import { timeAgo } from "../../src/lib/id";
 import { newId } from "../../src/lib/id";
+import { offerKindEmoji, offerKindLabel, offerStatusLabel, offerStatusTone } from "../../src/lib/offerLabels";
 
 export default function ThreadScreen() {
   const theme = useTheme();
@@ -19,6 +20,7 @@ export default function ThreadScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [detail, setDetail] = useState<ConversationDetail | null>(null);
+  const [offers, setOffers] = useState<Offer[]>([]);
   const [pending, setPending] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [notice, setNotice] = useState<ModerationResult | null>(null);
@@ -32,6 +34,11 @@ export default function ThreadScreen() {
       const d = await repos.messaging.getConversation(id);
       setDetail(d);
       setLoadState("ready");
+      try {
+        setOffers(await repos.offers.listForConversation(id));
+      } catch {
+        // offers are non-critical to the thread
+      }
       if (d) await repos.messaging.markRead(id);
     } catch {
       setLoadState("error");
@@ -163,6 +170,26 @@ export default function ThreadScreen() {
         </Pressable>
       ) : null}
 
+      {/* Offer strip */}
+      {offers.length > 0 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: theme.spacing.sm, paddingHorizontal: theme.spacing.lg, paddingTop: theme.spacing.sm }}>
+          {offers
+            .slice()
+            .reverse()
+            .map((o) => (
+              <Pressable
+                key={o.id}
+                onPress={() => router.push(`/offers/${o.id}`)}
+                style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.xs, backgroundColor: theme.colors.surfaceMuted, borderRadius: theme.radii.pill, paddingVertical: theme.spacing.xs, paddingHorizontal: theme.spacing.md }}
+              >
+                <AppText>{offerKindEmoji[o.kind]}</AppText>
+                <AppText variant="caption">{offerKindLabel[o.kind]}</AppText>
+                <Badge label={offerStatusLabel[o.status] ?? o.status} tone={offerStatusTone(o.status)} />
+              </Pressable>
+            ))}
+        </ScrollView>
+      ) : null}
+
       {/* Messages */}
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }} keyboardVerticalOffset={80}>
         <ScrollView ref={scrollRef} contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.sm }}>
@@ -216,6 +243,18 @@ export default function ThreadScreen() {
         ) : (
           <View style={{ borderTopWidth: 1, borderTopColor: theme.colors.border, padding: theme.spacing.md, gap: theme.spacing.sm }}>
             {notice ? <ModerationNotice result={notice} /> : null}
+            {ctx && ctx.kind === "listing" && ctx.id && !ctx.unavailable ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push({ pathname: "/offers/create", params: { conversationId: id, listingId: ctx.id } })}
+                style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.xs, alignSelf: "flex-start", backgroundColor: theme.colors.accentSoft, borderRadius: theme.radii.pill, paddingVertical: theme.spacing.xs, paddingHorizontal: theme.spacing.md }}
+              >
+                <AppText>🤝</AppText>
+                <AppText variant="caption" style={{ color: theme.colors.accentOnSoft }}>
+                  Make an offer
+                </AppText>
+              </Pressable>
+            ) : null}
             <View style={{ flexDirection: "row", alignItems: "flex-end", gap: theme.spacing.sm }}>
               <TextInput
                 style={{ flex: 1, backgroundColor: theme.colors.surfaceMuted, borderRadius: theme.radii.lg, paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.sm, color: theme.colors.text, maxHeight: 120 }}

@@ -5,6 +5,63 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Phase 1H — Offers & handoff coordination (2026-07-27)
+
+A lightweight, conversation-centered structured offer + handoff flow on top of the
+Phase 1G messaging system, reusing the Phase 1A reservation invariant. Students can
+agree on Give / Swap / Borrow / Lend, a handoff time + campus spot, and completion —
+no payments, deposits, ratings, maps, or live location. `sale` is modelled but not
+enabled.
+
+**Backend (migration 0031)**
+- Extends the Phase 1A `offers`/`transactions` tables: offers gain `kind`
+  (give/swap/borrow/lend/sale), `conversation_id`, `offered_listing_id`,
+  `handoff_location_text`, `return_by`, `expires_at`; transactions gain
+  `handoff_status`, `handoff_stage`, `handoff_location_text`, `return_by`,
+  `handed_over_at`, `returned_at`, `kind`. New enums `offer_kind` / `handoff_status`
+  / `handoff_stage`; `offer_status` gains `pending` (the live/actionable state).
+- **Privacy tightened**: offers/offer_items/transactions/reservations/handoff reads
+  are participant-only — the Phase 1A staff/platform read clauses are dropped, so
+  moderators do NOT see private offers.
+- **Concurrency-safe acceptance** reuses the `one_active_reservation_per_listing`
+  partial unique index: `public.accept_exchange_offer` locks + validates the
+  listing(s) then inserts reservations, so two accepts for the same item can never
+  both win (the loser gets a clear "no longer available"). Swap acceptance reserves
+  **both** listings atomically.
+- Public SECURITY DEFINER RPCs (all authorization/ownership/school/block checks
+  server-side): `create_exchange_offer`, `accept_/decline_/cancel_/
+  counter_exchange_offer`, `set_handoff_plan`, `confirm_completion` (bilateral for
+  give/swap), `mark_handed_over` + `mark_returned` (borrow/lend — collection and
+  return are DISTINCT events; a returned item goes back to `active`). Each
+  transition posts a system message into the conversation. One active proposal per
+  conversation; counters set `parent_offer_id` and mark the parent `countered`
+  (revision chain preserved). Prohibited/regulated categories can't be smuggled in;
+  declined/cancelled/expired offers never delete listings.
+- **pgTAP `35_offers_handoff.sql` (30 assertions)**: create, participant-only +
+  no-moderator reads, ownership, no self-accept, atomic reserve, **competing accept
+  → one winner**, decline leaves listing available, swap dual-reserve, counter
+  history, blocked can't create, completed listing can't receive an offer, bilateral
+  completion → listing completed, borrow handoff-vs-return. **Full pgTAP suite green
+  — 309 assertions / 22 files.** Enum parity **38/38**.
+
+**Mobile**
+- `OfferRepository` (Mock + Supabase) behind the existing abstraction:
+  create/accept/decline/cancel/counter, setHandoffPlan, confirmCompletion,
+  markHandedOver, markReturned, listForConversation, getById (with the revision
+  chain), myActiveOffers, myHandoffs. Domain `Offer` / `OfferDetail` / `Handoff`.
+  Schemas `createExchangeOffer` / `counterExchangeOffer` / `handoffPlan`.
+- Offer notes + handoff instructions pass the **local moderation simulator** before
+  submit (warn/block/escalate withholds the text).
+- Screens: **Create Offer** (kind + swap-item picker + handoff time/spot + borrow
+  return date), **Offer Detail** (accept/decline/counter/cancel, Handoff Plan card,
+  bilateral completion, borrow handed-over → returned, revision history,
+  conflict/unavailable states), offer cards + a "Make an offer" button inside the
+  conversation thread, and **My Offers & Handoffs**. "This item is no longer
+  available" surfaced on conflict.
+- Tests: `offers.mock` (lifecycle, swap dual-reserve, reserved-blocks-new,
+  completion, counter chain, borrow return, block), `createOffer` (moderation gate),
+  and a real-backend integration proof across two schools + a pending member.
+
 ### Phase 1G — Messaging vertical slice (2026-07-27)
 
 Real, same-school 1:1 messaging tied to listings, stalls, and markets — enough for

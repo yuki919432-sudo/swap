@@ -100,6 +100,7 @@ export default function ProfileScreen() {
       </Card>
 
       <Divider />
+      <Row icon="swap-horizontal-outline" label="My offers & handoffs" onPress={() => router.push("/offers")} />
       <Row icon="search-outline" label="My wishlist" value={String(wishCount)} onPress={() => router.push("/wishlist")} />
       <Row icon="bookmark-outline" label="Saved listings" value={String(savedCount)} onPress={() => router.push("/my-listings")} />
       <Row icon="pricetags-outline" label="My listings" value={String(draftCount)} onPress={() => router.push("/my-listings")} />

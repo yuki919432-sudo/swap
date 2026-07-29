@@ -18,6 +18,7 @@ import { SupabaseStallRepository } from "./stall";
 import { SupabaseMarketRepository } from "./market";
 import { SupabaseCampusMarketRepository } from "./campusMarket";
 import { SupabaseMessagingRepository } from "./messaging";
+import { SupabaseOfferRepository } from "./offers";
 
 export function createSupabaseRepositories(
   client: SupabaseClient,
@@ -37,6 +38,7 @@ export function createSupabaseRepositories(
     stalls,
     markets: new SupabaseMarketRepository(client),
     campusMarket: new SupabaseCampusMarketRepository(client, stalls),
+    offers: new SupabaseOfferRepository(client),
   };
 }
 
@@ -49,5 +51,6 @@ export {
   SupabaseMarketRepository,
   SupabaseCampusMarketRepository,
   SupabaseMessagingRepository,
+  SupabaseOfferRepository,
 };
 export type { ImageReader };

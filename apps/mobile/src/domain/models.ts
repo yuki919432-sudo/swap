@@ -8,12 +8,16 @@
  */
 import type {
   CommunityPostType,
+  HandoffStage,
+  HandoffStatus,
   ItemCondition,
   ListingPostType,
   ListingStatus,
   MarketStatus,
   MembershipStatus,
   MessageType,
+  OfferKind,
+  OfferStatus,
   VerificationMethod,
   WishlistStatus,
   WishlistUrgency,
@@ -241,3 +245,71 @@ export interface ConversationDetail {
 
 /** Kept as the Inbox list-item alias for backward compatibility with the tab. */
 export type InboxThread = Conversation;
+
+/* --------------------------------------------------------- Offers & handoff */
+
+/** A compact reference to a listing inside an offer card. */
+export interface OfferListingRef {
+  id: string;
+  title: string;
+  image: ImageRef | null;
+  postType: ListingPostType;
+  status: ListingStatus;
+  ownerId: string;
+}
+
+/** The handoff plan + lifecycle for an accepted offer (a transaction). */
+export interface Handoff {
+  id: string;
+  offerId: string;
+  kind: OfferKind;
+  /** Transaction status (handoff_pending / completed / cancelled / disputed). */
+  status: string;
+  handoffStatus: HandoffStatus;
+  /** Borrow/lend flow: none / handed_over / return_due / returned. */
+  stage: HandoffStage;
+  scheduledAt: string | null;
+  handoffLocationText: string | null;
+  returnBy: string | null;
+  handedOverAt: string | null;
+  returnedAt: string | null;
+  completedAt: string | null;
+  /** Whether the current viewer has confirmed completion (give/swap). */
+  iConfirmed: boolean;
+  /** Distinct confirmation count from the two participants (0/1/2). */
+  confirmations: number;
+}
+
+/** A structured exchange offer shown as a card inside a conversation. */
+export interface Offer {
+  id: string;
+  schoolId: string;
+  conversationId: string | null;
+  kind: OfferKind;
+  status: OfferStatus;
+  fromUserId: string;
+  toUserId: string;
+  /** The primary listing the exchange is about. */
+  listing: OfferListingRef | null;
+  /** For a swap, the item the sender offers in return. */
+  offeredListing: OfferListingRef | null;
+  note: string | null;
+  handoffAt: string | null;
+  handoffLocationText: string | null;
+  returnBy: string | null;
+  expiresAt: string | null;
+  parentOfferId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  /** Viewer-scoped flags. */
+  amSender: boolean;
+  amRecipient: boolean;
+}
+
+/** An offer with its handoff (if accepted) and its counter/revision chain. */
+export interface OfferDetail {
+  offer: Offer;
+  handoff: Handoff | null;
+  /** The full revision chain oldest-first (counteroffers), for history. */
+  chain: Offer[];
+}
