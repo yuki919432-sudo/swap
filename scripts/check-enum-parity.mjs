@@ -50,6 +50,9 @@ const ENUM_MAP = {
   CONVERSATION_STATUS: "conversation_status",
   MESSAGE_TYPE: "message_type",
   MESSAGE_MODERATION_STATUS: "message_moderation_status",
+  OFFER_KIND: "offer_kind",
+  HANDOFF_STATUS: "handoff_status",
+  HANDOFF_STAGE: "handoff_stage",
 };
 
 let checks = 0;

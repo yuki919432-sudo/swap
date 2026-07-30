@@ -212,6 +212,36 @@ host" (Temporary Market).
 Not in this checkpoint: offers, payments, file/image/voice/location attachments,
 push notifications, and any production Trust & Safety backend.
 
+## Offers & handoff
+
+Structured, conversation-centered exchange on top of messaging, behind
+`OfferRepository` (Mock + Supabase). Kinds: **Give / Swap / Borrow / Lend** (`sale`
+is modelled but not enabled — no payments). Screens: **Create Offer**
+(`/offers/create`), **Offer Detail** (`/offers/[id]`), **My Offers & Handoffs**
+(`/offers`), plus offer cards + a "Make an offer" button inside the conversation
+thread (`/messages/[id]`).
+
+- **Everything sensitive is a server RPC.** Create/accept/decline/cancel/counter and
+  the handoff transitions go through SECURITY DEFINER functions, so ownership,
+  same-school, block, and availability checks live in the database — the client
+  never asserts ownership or school id.
+- **Acceptance is atomic + concurrency-safe.** It reuses the Phase 1A
+  `one_active_reservation_per_listing` partial unique index: the listing(s) are
+  locked + validated, then reserved. Two accepts for the same item can't both win —
+  the loser sees *"This item is no longer available."* A **swap** reserves both
+  listings atomically.
+- **Completion.** Give/Swap complete **bilaterally** (both confirm → the listing
+  completes). Borrow/Lend track collection and return as **distinct** events
+  (`handed_over` → `return_due` → `returned`); a returned item goes back to
+  `active`.
+- **Counteroffers** modify terms and preserve a revision chain (`parent_offer_id`);
+  only one active proposal exists per conversation at a time.
+- **Privacy**: offers are readable only by the two participants — moderators do not
+  get access. **Blocking** prevents creating/countering. Offer notes + handoff
+  instructions run through the local moderation simulator before submit.
+- Not in this checkpoint: payments, deposits, ratings/reviews, push, maps/live
+  location, attachments, and any production Trust & Safety backend.
+
 ## Local persistence
 
 Repositories persist through a tiny `KeyValueStore` (`src/data/storage.ts`):

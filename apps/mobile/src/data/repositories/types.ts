@@ -7,17 +7,21 @@
  * touching a single screen.
  */
 import type { ItemCondition, ListingPostType, ListingStatus, MarketStatus, WishlistStatus, WishlistUrgency, WishlistVisibility } from "@swap/types";
+import type { OfferKind } from "@swap/types";
 import type {
   CommunityItem,
   Conversation,
   ConversationDetail,
   DemoProfile,
   DemoSchool,
+  Handoff,
   ImageRef,
   Listing,
   Market,
   MarketDetail,
   Message,
+  Offer,
+  OfferDetail,
   OwnerPreview,
   Stall,
   StallDetail,
@@ -279,6 +283,71 @@ export interface CampusMarketRepository {
   recentStalls(schoolId: string, limit?: number): Promise<Stall[]>;
 }
 
+/* ------------------------------------------------------------- offers/handoff */
+
+/** Fields to create a conversation-centered exchange offer. */
+export interface NewOffer {
+  conversationId: string;
+  kind: OfferKind;
+  listingId: string;
+  offeredListingId?: string | null;
+  note?: string | null;
+  handoffAt?: string | null;
+  handoffLocationText?: string | null;
+  handoffLocationId?: string | null;
+  returnBy?: string | null;
+  expiresAt?: string | null;
+}
+
+/** Fields to counter the current proposal (preserves the offer chain). */
+export interface CounterOffer {
+  parentOfferId: string;
+  offeredListingId?: string | null;
+  note?: string | null;
+  handoffAt?: string | null;
+  handoffLocationText?: string | null;
+  handoffLocationId?: string | null;
+  returnBy?: string | null;
+}
+
+/** Fields to set/update a handoff plan on an accepted offer's transaction. */
+export interface HandoffPlan {
+  transactionId: string;
+  handoffAt?: string | null;
+  handoffLocationText?: string | null;
+  handoffLocationId?: string | null;
+  ready?: boolean;
+}
+
+export interface OfferRepository {
+  /** Offers attached to a conversation (rendered as cards in the thread). */
+  listForConversation(conversationId: string): Promise<Offer[]>;
+  /** An offer + its handoff (if accepted) + its counter/revision chain. */
+  getById(offerId: string): Promise<OfferDetail | null>;
+  /** Create a new offer (server enforces ownership/school/block/availability). */
+  create(input: NewOffer): Promise<Offer>;
+  /** Recipient accepts → atomic reservation; returns the handoff. */
+  accept(offerId: string): Promise<Handoff>;
+  /** Recipient declines the current proposal. */
+  decline(offerId: string): Promise<void>;
+  /** Sender cancels their pending offer. */
+  cancel(offerId: string): Promise<void>;
+  /** Recipient counters with modified terms (parent becomes 'countered'). */
+  counter(input: CounterOffer): Promise<Offer>;
+  /** Set/update the handoff plan (time, location, ready). */
+  setHandoffPlan(input: HandoffPlan): Promise<Handoff>;
+  /** Give/Swap: confirm completion (bilateral — completes on mutual confirm). */
+  confirmCompletion(transactionId: string): Promise<Handoff>;
+  /** Borrow/Lend: mark the item handed over (collection). */
+  markHandedOver(transactionId: string): Promise<Handoff>;
+  /** Borrow/Lend: mark the item returned (completes + restores the listing). */
+  markReturned(transactionId: string): Promise<Handoff>;
+  /** The caller's non-terminal offers across a school (My Active Offers). */
+  myActiveOffers(schoolId: string): Promise<Offer[]>;
+  /** The caller's accepted-but-not-finished handoffs (My Handoffs). */
+  myHandoffs(schoolId: string): Promise<OfferDetail[]>;
+}
+
 /* ------------------------------------------------------------- aggregate DI */
 
 export interface Repositories {
@@ -292,4 +361,5 @@ export interface Repositories {
   stalls: StallRepository;
   markets: MarketRepository;
   campusMarket: CampusMarketRepository;
+  offers: OfferRepository;
 }

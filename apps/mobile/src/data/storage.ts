@@ -74,6 +74,16 @@ export const StorageKeys = {
   demoReadState: "swap.demo.readState",
   /** User ids the demo user has blocked. */
   demoBlocks: "swap.demo.blocks",
+  /** Locally-created exchange offers (demo mode). */
+  demoOffers: "swap.demo.offers",
+  /** Local offer transactions (accepted offers → handoff). */
+  demoTransactions: "swap.demo.transactions",
+  /** Local listing reservations: {listingId, transactionId, status}. */
+  demoReservations: "swap.demo.reservations",
+  /** Local handoff completion confirmations: {transactionId, userId}. */
+  demoConfirmations: "swap.demo.confirmations",
+  /** Offer-driven listing status overrides: {listingId: status}. */
+  demoListingStatus: "swap.demo.listingStatus",
   /** Categories the user has recently browsed (a client-side recommendation signal). */
   browsedCategories: "swap.browsedCategories",
 } as const;

@@ -21,7 +21,11 @@ insert into allow values
   ('public','resolve_roster_membership'), ('public','request_membership'),
   ('public','review_membership_request'), ('public','set_membership_status'),
   ('public','verify_email_otp'), ('public','get_email_delivery_status'),
-  ('public','start_conversation'), ('public','conversation_unread_counts');
+  ('public','start_conversation'), ('public','conversation_unread_counts'),
+  ('public','create_exchange_offer'), ('public','accept_exchange_offer'),
+  ('public','decline_exchange_offer'), ('public','cancel_exchange_offer'),
+  ('public','counter_exchange_offer'), ('public','set_handoff_plan'),
+  ('public','confirm_completion'), ('public','mark_handed_over'), ('public','mark_returned');
 
 -- ---- app.write_audit is not executable by authenticated -------------------
 select ok(

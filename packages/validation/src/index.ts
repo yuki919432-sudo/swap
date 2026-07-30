@@ -15,6 +15,7 @@ import {
   WISHLIST_STATUS,
   WISHLIST_VISIBILITY,
   MARKET_STATUS,
+  OFFER_KIND,
 } from "@swap/types";
 import { uuid, shortText, mediumText, longText, email, timezone, gradYear, isoDateTime } from "./primitives.js";
 
@@ -150,6 +151,55 @@ export type CreateOfferInput = z.infer<typeof createOfferSchema>;
 export const acceptOfferSchema = z.object({ offerId: uuid });
 export const declineOfferSchema = z.object({ offerId: uuid });
 export const confirmHandoffSchema = z.object({ transactionId: uuid });
+
+/* ---------------------------------------- Exchange offers & handoff (1H) */
+
+/** Create a conversation-centered exchange offer (give/swap/borrow/lend). */
+export const createExchangeOfferSchema = z
+  .object({
+    conversationId: uuid,
+    kind: zEnum(OFFER_KIND),
+    listingId: uuid,
+    offeredListingId: uuid.nullable().optional(),
+    note: mediumText.nullable().optional(),
+    handoffAt: isoDateTime.nullable().optional(),
+    handoffLocationText: shortText.nullable().optional(),
+    handoffLocationId: uuid.nullable().optional(),
+    returnBy: isoDateTime.nullable().optional(),
+    expiresAt: isoDateTime.nullable().optional(),
+  })
+  .refine((v) => v.kind !== "sale", { message: "sale_not_enabled", path: ["kind"] })
+  .refine((v) => v.kind !== "swap" || (v.offeredListingId !== null && v.offeredListingId !== undefined), {
+    message: "swap_requires_offered_listing",
+    path: ["offeredListingId"],
+  })
+  .refine((v) => v.offeredListingId === null || v.offeredListingId === undefined || v.offeredListingId !== v.listingId, {
+    message: "cannot_swap_same_listing",
+    path: ["offeredListingId"],
+  });
+export type CreateExchangeOfferInput = z.infer<typeof createExchangeOfferSchema>;
+
+/** Counter the current proposal (modifies terms; preserves the offer chain). */
+export const counterExchangeOfferSchema = z.object({
+  parentOfferId: uuid,
+  offeredListingId: uuid.nullable().optional(),
+  note: mediumText.nullable().optional(),
+  handoffAt: isoDateTime.nullable().optional(),
+  handoffLocationText: shortText.nullable().optional(),
+  handoffLocationId: uuid.nullable().optional(),
+  returnBy: isoDateTime.nullable().optional(),
+});
+export type CounterExchangeOfferInput = z.infer<typeof counterExchangeOfferSchema>;
+
+/** Set / update the handoff plan for an accepted offer's transaction. */
+export const handoffPlanSchema = z.object({
+  transactionId: uuid,
+  handoffAt: isoDateTime.nullable().optional(),
+  handoffLocationText: shortText.nullable().optional(),
+  handoffLocationId: uuid.nullable().optional(),
+  ready: z.boolean().default(false),
+});
+export type HandoffPlanInput = z.infer<typeof handoffPlanSchema>;
 
 /* -------------------------------------------------------- Events / community */
 
