@@ -6,9 +6,9 @@
  * for a future "matching item listed" notification.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { ItemCondition, WishlistStatus, WishlistUrgency, WishlistVisibility } from "@swap/types";
-import type { WishlistItem, WishlistMatch } from "../../../domain/models";
-import type { NewWishlistItem, WishlistRepository } from "../types";
+import type { ItemCondition, ListingPostType, ListingStatus, WishlistStatus, WishlistUrgency, WishlistVisibility } from "@swap/types";
+import type { MatchedListing, WishlistItem, WishlistMatch, WishlistMatchDetail } from "../../../domain/models";
+import type { NewWishlistItem, WishlistPatch, WishlistRepository } from "../types";
 
 interface WishlistRow {
   id: string;
@@ -100,6 +100,20 @@ export class SupabaseWishlistRepository implements WishlistRepository {
     return toItem(data as WishlistRow);
   }
 
+  async update(id: string, patch: WishlistPatch): Promise<WishlistItem> {
+    // Only the provided fields are sent; RLS restricts UPDATE to the owner.
+    const row: Record<string, unknown> = {};
+    if (patch.title !== undefined) row.title = patch.title.trim();
+    if (patch.description !== undefined) row.description = patch.description?.trim() || null;
+    if (patch.preferredCategory !== undefined) row.preferred_category = patch.preferredCategory;
+    if (patch.preferredCondition !== undefined) row.preferred_condition = patch.preferredCondition;
+    if (patch.swapAcceptable !== undefined) row.swap_acceptable = patch.swapAcceptable;
+    if (patch.urgency !== undefined) row.urgency = patch.urgency;
+    const { data, error } = await this.client.from("wishlist_items").update(row).eq("id", id).select("*").single();
+    if (error || !data) throw new Error(error?.message ?? "update_failed");
+    return toItem(data as WishlistRow);
+  }
+
   async updateStatus(id: string, status: WishlistStatus): Promise<void> {
     const { error } = await this.client.from("wishlist_items").update({ status }).eq("id", id);
     if (error) throw new Error(error.message);
@@ -133,5 +147,45 @@ export class SupabaseWishlistRepository implements WishlistRepository {
         notified: r.notified_at !== null,
       }),
     );
+  }
+
+  async matchDetailsForMe(): Promise<WishlistMatchDetail[]> {
+    const matches = await this.matchesForMe();
+    if (matches.length === 0) return [];
+
+    // Resolve the wishlist titles (mine) and the CURRENT state of each matched
+    // listing. A match to a soft-deleted / reserved / completed listing persists in
+    // the outbox but is flagged not-available so the UI can show it cleanly.
+    const wishIds = [...new Set(matches.map((m) => m.wishlistItemId))];
+    const listingIds = [...new Set(matches.map((m) => m.listingId))];
+    const [wishRes, listingRes] = await Promise.all([
+      this.client.from("wishlist_items").select("id, title").in("id", wishIds),
+      this.client.from("listings").select("id, title, owner_id, post_type, status, deleted_at").in("id", listingIds),
+    ]);
+    if (wishRes.error) throw new Error(wishRes.error.message);
+    if (listingRes.error) throw new Error(listingRes.error.message);
+
+    const titleById = new Map<string, string>();
+    for (const w of (wishRes.data ?? []) as { id: string; title: string }[]) titleById.set(w.id, w.title);
+
+    interface ListingLite {
+      id: string;
+      title: string;
+      owner_id: string;
+      post_type: ListingPostType;
+      status: ListingStatus;
+      deleted_at: string | null;
+    }
+    const listingById = new Map<string, ListingLite>();
+    for (const l of (listingRes.data ?? []) as ListingLite[]) listingById.set(l.id, l);
+
+    return matches.map((m) => {
+      const l = listingById.get(m.listingId);
+      const available = l !== undefined && l.deleted_at === null && l.status === "active";
+      const listing: MatchedListing | null = l
+        ? { id: l.id, title: l.title, ownerId: l.owner_id, postType: l.post_type, status: l.status, image: null }
+        : null;
+      return { wishlistItemId: m.wishlistItemId, wishlistTitle: titleById.get(m.wishlistItemId) ?? "Your wish", listing, available, score: m.score, notified: m.notified };
+    });
   }
 }

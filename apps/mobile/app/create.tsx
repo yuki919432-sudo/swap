@@ -22,6 +22,11 @@ import type { ImageRef } from "../src/domain/models";
 import type { DraftListing } from "../src/data/repositories/types";
 import { assessListing, publishListing, type ListingFormInput } from "../src/features/createListing";
 import { newId } from "../src/lib/id";
+import { JsonStore } from "../src/data/storage";
+import { asyncStorageKeyValueStore } from "../src/data/asyncStorage";
+import { KvActivityRecorder, demandResponseEvent } from "../src/activity";
+
+const activity = new KvActivityRecorder(new JsonStore(asyncStorageKeyValueStore));
 
 const EXPIRY_OPTIONS: { label: string; days: number | null }[] = [
   { label: "No expiry", days: null },
@@ -46,13 +51,19 @@ export default function CreateListingScreen() {
   const router = useRouter();
   const repos = useRepositories();
   const { session } = useSession();
-  const { draftId, marketId } = useLocalSearchParams<{ draftId?: string; marketId?: string }>();
+  const { draftId, marketId, prefillTitle, prefillCategory, fromDemand } = useLocalSearchParams<{
+    draftId?: string;
+    marketId?: string;
+    prefillTitle?: string;
+    prefillCategory?: string;
+    fromDemand?: string;
+  }>();
 
   const [id] = useState(() => draftId ?? newId("draft"));
   const [postType, setPostType] = useState<ListingPostType>("give");
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(prefillTitle ?? "");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<string>("textbooks");
+  const [category, setCategory] = useState<string>(prefillCategory !== undefined && prefillCategory.length > 0 ? prefillCategory : "textbooks");
   const [condition, setCondition] = useState<ItemCondition | null>("good");
   const [desiredItem, setDesiredItem] = useState("");
   const [images, setImages] = useState<ImageRef[]>([]);
@@ -155,6 +166,11 @@ export default function CreateListingScreen() {
       });
       if (result.published && result.listing) {
         await repos.drafts.markPublished(id, result.listing.id);
+        // Listed in response to visible campus demand → prepare an in-app activity
+        // event (never a push). The demand surface only ever showed aggregate counts.
+        if (fromDemand === "1") {
+          await activity.record([demandResponseEvent({ label: title.trim() || (prefillTitle ?? "an item"), listingId: result.listing.id })]);
+        }
         // If we came from a market, associate the new listing with it.
         if (marketId) {
           try {

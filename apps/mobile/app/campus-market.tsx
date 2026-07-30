@@ -87,7 +87,17 @@ export default function CampusMarketScreen() {
           <SectionHeader title="Students Are Looking For" actionLabel="List one" onAction={() => router.push("/create")} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: theme.spacing.sm }}>
             {demand.slice(0, 10).map((d) => (
-              <Card key={d.key} onPress={() => router.push("/create")} elevation="none" style={{ width: 180 }}>
+              <Card
+                key={d.key}
+                onPress={() =>
+                  router.push({
+                    pathname: "/create",
+                    params: { prefillTitle: d.label, prefillCategory: d.category ?? "", fromDemand: "1" },
+                  })
+                }
+                elevation="none"
+                style={{ width: 180 }}
+              >
                 <AppText variant="bodyStrong" numberOfLines={2}>
                   {d.label}
                 </AppText>

@@ -16,6 +16,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
 import { SupabaseMarketplaceRepository } from "./marketplace";
 import { SupabaseWishlistRepository } from "./wishlist";
+import { SupabaseMessagingRepository } from "./messaging";
 import type { NewListing, NewWishlistItem } from "../types";
 import type { OwnerPreview } from "../../../domain/models";
 
@@ -126,6 +127,43 @@ describe.skipIf(!URL)("Supabase wishlist + match outbox (two real users)", () =>
     const aMatches = await new SupabaseWishlistRepository(a.client).matchesForMe();
     // Still only the one match from B's listing (A's own listing is excluded).
     expect(aMatches.filter((x) => x.wishlistItemId === wishId)).toHaveLength(1);
+  });
+
+  it("A can message the matched listing's owner from the match", async () => {
+    const details = await new SupabaseWishlistRepository(a.client).matchDetailsForMe();
+    const hit = details.find((d) => d.wishlistItemId === wishId && d.available)!;
+    expect(hit.listing).not.toBeNull();
+    expect(hit.listing!.ownerId).toBe(b.id); // reach the lister, not A
+    const conversationId = await new SupabaseMessagingRepository(a.client).startConversation({
+      otherUserId: hit.listing!.ownerId,
+      listingId: hit.listing!.id,
+    });
+    expect(conversationId).toBeTruthy();
+  });
+
+  it("a fulfilled wishlist stops accruing new matches", async () => {
+    const repo = new SupabaseWishlistRepository(a.client);
+    await repo.updateStatus(wishId, "fulfilled");
+    // B posts ANOTHER matching listing after the wish was fulfilled.
+    const later = await new SupabaseMarketplaceRepository(b.client, { imageReader: async () => new Uint8Array() }).createListing(
+      { ...matchingListing, title: `Mini fridge later ${tag}` },
+      owner,
+    );
+    const matches = await repo.matchesForMe();
+    expect(matches.some((m) => m.listingId === later.id)).toBe(false); // no new match for a fulfilled wish
+    await repo.updateStatus(wishId, "active"); // reopen for the availability check below
+  });
+
+  it("a taken-down matched listing is flagged unavailable (not a dead link)", async () => {
+    // Find B's original matching listing via A's outbox, then B soft-deletes it.
+    const before = await new SupabaseWishlistRepository(a.client).matchDetailsForMe();
+    const target = before.find((d) => d.available && d.listing !== null)!;
+    await new SupabaseMarketplaceRepository(b.client, { imageReader: async () => new Uint8Array() }).deleteListing(target.listing!.id);
+
+    const after = await new SupabaseWishlistRepository(a.client).matchDetailsForMe();
+    const stale = after.find((d) => d.listing?.id === target.listing!.id);
+    // The match persists in the outbox but is cleanly flagged not-available.
+    expect(stale?.available ?? false).toBe(false);
   });
 
   it("cancelling a wishlist item removes it from my list", async () => {

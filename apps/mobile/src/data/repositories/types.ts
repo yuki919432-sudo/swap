@@ -27,6 +27,7 @@ import type {
   StallDetail,
   WishlistItem,
   WishlistMatch,
+  WishlistMatchDetail,
 } from "../../domain/models";
 
 /* ------------------------------------------------------------------ session */
@@ -186,12 +187,24 @@ export interface NewWishlistItem {
   visibility: WishlistVisibility;
 }
 
+/** Editable fields of an existing wishlist request (status/visibility change elsewhere). */
+export interface WishlistPatch {
+  title?: string;
+  description?: string | null;
+  preferredCategory?: string | null;
+  preferredCondition?: ItemCondition | null;
+  swapAcceptable?: boolean;
+  urgency?: WishlistUrgency;
+}
+
 export interface WishlistRepository {
   /** The caller's own wishlist items (any status). */
   listMine(): Promise<WishlistItem[]>;
   /** Active wishlist items across the school (surface throughout the product). */
   listForSchool(schoolId: string): Promise<WishlistItem[]>;
   create(input: NewWishlistItem): Promise<WishlistItem>;
+  /** Edit an existing request the caller owns (title/details/urgency/swap). */
+  update(id: string, patch: WishlistPatch): Promise<WishlistItem>;
   updateStatus(id: string, status: WishlistStatus): Promise<void>;
   /** Toggle whether this "looking for" request is shown on the owner's stall. */
   setShowOnStall(id: string, show: boolean): Promise<void>;
@@ -199,6 +212,12 @@ export interface WishlistRepository {
   remove(id: string): Promise<void>;
   /** The caller's match outbox: listings the backend matched to their wishlist. */
   matchesForMe(): Promise<WishlistMatch[]>;
+  /**
+   * The caller's matches resolved against each listing's CURRENT state — carries
+   * the matched listing (for "Message owner") and an availability flag so the UI
+   * can cleanly show items that are no longer available.
+   */
+  matchDetailsForMe(): Promise<WishlistMatchDetail[]>;
 }
 
 /* ------------------------------------------------------------ student stalls */
