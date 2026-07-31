@@ -14,3 +14,4 @@ export { SectionHeader, EmptyState, Skeleton, ListingCardSkeleton, IconButton, D
 export { ModerationNotice } from "./ModerationNotice";
 export { ShelfRail } from "./ShelfRail";
 export { WishlistCard } from "./WishlistCard";
+export { MissingBackendScreen } from "./MissingBackendScreen";

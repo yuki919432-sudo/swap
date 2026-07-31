@@ -5,6 +5,29 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Pilot build & environment safety (2026-07-31)
+
+First step of the path to a Florida boarding-high-school pilot: make builds
+explicit about whether they may use demo data, and guarantee a real build never
+silently serves synthetic listings.
+
+- **App mode** (`EXPO_PUBLIC_APP_MODE` = `demo` | `pilot`, default `demo`). A pure,
+  unit-tested resolver (`src/config/appMode.ts`) chooses the data source.
+- **No silent mock fallback.** In `pilot` mode the app **always** uses the real
+  Supabase repositories; if the backend is not configured it renders a clear
+  **"Backend not configured"** screen (`MissingBackendScreen`) instead of falling
+  back to demo data. Enforced in the single data-source chooser (`RepositoryProvider`).
+- **Service-role key guard.** `supabaseEnvStatus()` decodes the anon key's JWT
+  `role` claim; a `service_role` key is treated as a misconfiguration (never a
+  usable client key) and surfaces the missing-backend screen.
+- **EAS build profiles** (`apps/mobile/eas.json`): `development` (demo, dev client),
+  `preview` (pilot, internal/TestFlight), `production` (pilot, store). Backend
+  secrets are supplied per profile as EAS env — never committed.
+- Docs: `docs/BUILD_AND_ENVIRONMENTS.md` (modes, env vars, profiles, secret
+  handling, the no-fallback guarantee); `.env.example` documents `APP_MODE`.
+- Tests: `appMode` resolver (pilot never → mock; demo → mock unless configured +
+  signed in) and the service-role-key detector. Mobile suite **138**.
+
 ### Wishlist completion & polish (2026-07-30)
 
 Pilot-ready polish of the existing first-class Wishlist ("Looking For") feature —
