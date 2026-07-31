@@ -86,4 +86,6 @@ export const StorageKeys = {
   demoListingStatus: "swap.demo.listingStatus",
   /** Categories the user has recently browsed (a client-side recommendation signal). */
   browsedCategories: "swap.browsedCategories",
+  /** Prepared in-app activity events (wishlist match / unavailable / fulfilled / demand response). */
+  activityEvents: "swap.activityEvents",
 } as const;

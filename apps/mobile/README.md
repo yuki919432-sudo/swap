@@ -123,12 +123,28 @@ Two distinct concepts:
   school visibility. Wishes surface throughout the app (Home entry, "around campus",
   student stalls).
 
+**Wishlist journey (pilot).** The full lifecycle lives on `/wishlist`: create,
+**edit** (`WishlistRepository.update`), mark **fulfilled**, **reopen**, **cancel**,
+**delete**, and a show-on-stall toggle, with **Active / Fulfilled / Inactive**
+status views. `matchDetailsForMe()` resolves the match outbox against each listing's
+current state, so the **Matched listings** section can offer **"Message owner"**
+(starts/reuses a conversation) for live matches and cleanly show **"No longer
+available"** for taken-down / reserved / completed ones. Loading (skeletons),
+error+retry, empty, and no-match states are all handled. Campus Market demand
+clusters **prefill the create screen** so you can list in response to visible
+demand.
+
 **Match outbox + notification hook (prepared, not sent).** A database trigger runs
 a deterministic matcher on every new listing and records `(wishlist → listing,
 score)` rows into `wishlist_matches` with an `notified_at` outbox column. A future
 push-notification service ("A new item matching your wishlist has been listed.")
 implements `WishlistNotifier` and marks rows notified — `NoopWishlistNotifier` is
-the current no-op. No push notifications are sent in this phase.
+the current no-op. **No push notifications are sent.** Alongside it, `src/activity`
+models prepared **in-app activity events** — `wishlist_match`,
+`matched_listing_unavailable`, `wishlist_fulfilled`, `demand_response` — with an
+idempotent `KvActivityRecorder` for a future in-app activity feed (again, nothing is
+pushed). A fulfilled or cancelled request accrues no new matches; matches never
+cross schools (RLS), and demand is only ever an aggregate count.
 
 **Recommendation engine** (`src/recommendations/`) — modular and replaceable:
 screens depend on the `RecommendationEngine` interface, not the implementation. The

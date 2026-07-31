@@ -5,6 +5,57 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Wishlist completion & polish (2026-07-30)
+
+Pilot-ready polish of the existing first-class Wishlist ("Looking For") feature —
+no rebuild of the schema, matcher, outbox, repositories, or the deterministic
+recommendation engine. Saved Listings (bookmarks) and Wishlist (persistent
+requests) stay clearly separate in data and UI.
+
+**Repository (Mock + Supabase, same interface)**
+- `WishlistRepository.update(id, patch)` — edit a request's title/details/category/
+  condition/urgency/swap (owner-only via RLS UPDATE; Mock mirrors it).
+- `matchDetailsForMe()` — resolves the match outbox against each listing's CURRENT
+  state, carrying the matched listing (owner id, post type, status) and an
+  `available` flag so a taken-down / reserved / completed listing is shown cleanly
+  as "no longer available" instead of a dead link (the match row persists).
+- Mock `listMine()` now returns requests of ALL statuses (cancelled included) so a
+  request can be reopened; a hard `remove()` is what takes it off the list.
+
+**Mobile UX (`app/wishlist.tsx`)**
+- Full request lifecycle: create, **edit**, mark **fulfilled**, **reopen**,
+  **cancel**, **delete**, and a show-on-stall toggle — via a per-item action sheet.
+- Status views: **Active / Fulfilled / Inactive** filter with counts.
+- **Matched listings** section: each match shows the item and a **Message owner**
+  action (starts/reuses a conversation from the match); unavailable matches render
+  as "No longer available". Clear loading (skeletons), error+retry, empty, and
+  no-match states throughout.
+- Home and Campus Market keep **"Matches Your Wishlist"** (recommendation +
+  discovery shelves); Campus Market shows **privacy-safe demand counts** (distinct
+  students only, never identities) and each demand cluster now **prefills the create
+  screen** to list in response to visible campus demand.
+
+**In-app activity events (prepared, NOT sent)**
+- New `src/activity` module models `wishlist_match`, `matched_listing_unavailable`,
+  `wishlist_fulfilled`, and `demand_response` events with deterministic ids, plus an
+  idempotent `KvActivityRecorder` (and a no-op). The wishlist/create flows emit them
+  for a future in-app activity feed — **no push notifications** are sent.
+
+**Tests**
+- pgTAP `32_wishlist.sql` (+2 → suite **311 / 22 files**): a **fulfilled** or
+  **cancelled** request accrues **no new matches**; cross-school members still can't
+  see (or infer demand from) another school's wishlist.
+- Vitest (mobile **132**): edit, reopen, `matchDetails` available **and** unavailable
+  handling, **message the owner from a match**, **Saved vs Wishlist stay separate**,
+  the activity-event builders + recorder, and a data-source test proving a **pilot
+  build wires the real `SupabaseWishlistRepository`** (not demo data).
+- Integration (`wishlist.integration.test.ts`, real Supabase): message the matched
+  owner, a fulfilled wish stops new matches, and a taken-down listing is flagged
+  unavailable.
+
+No external AI, no matcher rewrite, no payments, no push — a polished, reliable
+wishlist journey.
+
 ### Phase 1H — Offers & handoff coordination (2026-07-27)
 
 A lightweight, conversation-centered structured offer + handoff flow on top of the

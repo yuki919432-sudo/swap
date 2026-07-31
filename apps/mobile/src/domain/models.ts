@@ -129,6 +129,32 @@ export interface WishlistMatch {
   notified: boolean;
 }
 
+/** The slice of a matched listing the wishlist UI needs (message the owner, show status). */
+export interface MatchedListing {
+  id: string;
+  title: string;
+  /** Who "Message owner" reaches. */
+  ownerId: string;
+  postType: ListingPostType;
+  status: ListingStatus;
+  image: ImageRef | null;
+}
+
+/**
+ * A match from the outbox resolved against the listing's CURRENT state. `available`
+ * is false when the listing was taken down or is no longer offerable (deleted,
+ * reserved, or completed) — the UI shows "no longer available" instead of a dead link.
+ */
+export interface WishlistMatchDetail {
+  wishlistItemId: string;
+  wishlistTitle: string;
+  /** null only when the listing row is gone entirely (hard-deleted). */
+  listing: MatchedListing | null;
+  available: boolean;
+  score: number;
+  notified: boolean;
+}
+
 /* --------------------------------------------------------- Campus markets */
 
 /** A lightweight student stall (a casual profile over a student's listings). */

@@ -2,7 +2,7 @@
 -- Wishlist ("looking for") data model: RLS isolation + the deterministic match
 -- outbox populated by the new-listing trigger.
 begin;
-select plan(12);
+select plan(14);
 
 -- ------------------------------------------------------------- fixtures ------
 insert into schools (id, name, slug, status) values
@@ -104,6 +104,28 @@ select tests.reset_auth();
 select tests.authenticate_as('c0000000-0000-0000-0000-000000000002');
 select is((select count(*)::int from wishlist_matches), 0, 'a non-owner cannot read the wishlist owner''s matches');
 select tests.reset_auth();
+
+-- ============================================= fulfilled/cancelled stop new matches
+-- Once the wisher marks the request FULFILLED, a freshly-listed matching item must
+-- NOT create a new active match (the deterministic matcher only serves active wishes).
+update wishlist_items set status = 'fulfilled' where id = '11110000-0000-0000-0000-000000000001';
+select tests.authenticate_as('c0000000-0000-0000-0000-000000000002');
+insert into listings (id, school_id, owner_id, post_type, title, description, category, condition)
+  values ('22220000-0000-0000-0000-000000000004','aaaa0000-0000-0000-0000-0000000000aa',
+          'c0000000-0000-0000-0000-000000000002','give','Mini fridge','another one','dormitory_items','good');
+select tests.reset_auth();
+select is((select count(*)::int from wishlist_matches where listing_id='22220000-0000-0000-0000-000000000004'), 0,
+  'a fulfilled wishlist does not accrue new matches');
+
+-- Same for a CANCELLED request.
+update wishlist_items set status = 'cancelled' where id = '11110000-0000-0000-0000-000000000001';
+select tests.authenticate_as('c0000000-0000-0000-0000-000000000002');
+insert into listings (id, school_id, owner_id, post_type, title, description, category, condition)
+  values ('22220000-0000-0000-0000-000000000005','aaaa0000-0000-0000-0000-0000000000aa',
+          'c0000000-0000-0000-0000-000000000002','give','Mini fridge','yet another','dormitory_items','good');
+select tests.reset_auth();
+select is((select count(*)::int from wishlist_matches where listing_id='22220000-0000-0000-0000-000000000005'), 0,
+  'a cancelled wishlist does not accrue new matches');
 
 select * from finish();
 rollback;

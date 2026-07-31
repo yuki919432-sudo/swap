@@ -20,8 +20,9 @@ import type {
   StallDetail,
   WishlistItem,
   WishlistMatch,
+  WishlistMatchDetail,
 } from "../../domain/models";
-import type { ListingPostType, MarketStatus, WishlistStatus } from "@swap/types";
+import type { ListingPostType, ListingStatus, MarketStatus, WishlistStatus } from "@swap/types";
 import { LISTING_POST_TYPE } from "@swap/types";
 import {
   type DemoMarket,
@@ -73,6 +74,7 @@ import type {
   StallRepository,
   StartConversationInput,
   Unsubscribe,
+  WishlistPatch,
   WishlistRepository,
 } from "./types";
 
@@ -469,7 +471,9 @@ export class MockWishlistRepository implements WishlistRepository {
   }
 
   async listMine(): Promise<WishlistItem[]> {
-    return (await this.mine()).filter((w) => w.status !== "cancelled");
+    // All of the caller's requests regardless of status (cancelled included, so it
+    // can be reopened); a hard remove() is what takes an item off the list.
+    return this.mine();
   }
   async listForSchool(schoolId: string): Promise<WishlistItem[]> {
     const uid = await this.currentUserId();
@@ -497,6 +501,22 @@ export class MockWishlistRepository implements WishlistRepository {
     await this.store.write(StorageKeys.demoWishlist, [item, ...(await this.mine())]);
     return item;
   }
+  async update(id: string, patch: WishlistPatch): Promise<WishlistItem> {
+    const items = await this.mine();
+    const current = items.find((w) => w.id === id);
+    if (!current) throw new Error("wishlist_item_not_found");
+    const next: WishlistItem = {
+      ...current,
+      title: patch.title !== undefined ? patch.title.trim() : current.title,
+      description: patch.description !== undefined ? (patch.description?.trim() || null) : current.description,
+      preferredCategory: patch.preferredCategory !== undefined ? patch.preferredCategory : current.preferredCategory,
+      preferredCondition: patch.preferredCondition !== undefined ? patch.preferredCondition : current.preferredCondition,
+      swapAcceptable: patch.swapAcceptable !== undefined ? patch.swapAcceptable : current.swapAcceptable,
+      urgency: patch.urgency !== undefined ? patch.urgency : current.urgency,
+    };
+    await this.store.write(StorageKeys.demoWishlist, items.map((w) => (w.id === id ? next : w)));
+    return next;
+  }
   async updateStatus(id: string, status: WishlistStatus): Promise<void> {
     const items = await this.mine();
     await this.store.write(
@@ -514,12 +534,17 @@ export class MockWishlistRepository implements WishlistRepository {
   async remove(id: string): Promise<void> {
     await this.store.write(StorageKeys.demoWishlist, (await this.mine()).filter((w) => w.id !== id));
   }
+  /** The current feed for the schools the caller has an active wish in. */
+  private async matchFeed(mine: WishlistItem[]): Promise<Listing[]> {
+    const published = await this.store.read<Listing[]>(StorageKeys.publishedDemoListings, []);
+    const bySchool = new Set(mine.map((w) => w.schoolId));
+    return [...published, ...demoListings].filter((l) => bySchool.has(l.schoolId));
+  }
+
   async matchesForMe(): Promise<WishlistMatch[]> {
     const mine = (await this.mine()).filter((w) => w.status === "active");
     if (mine.length === 0) return [];
-    const published = await this.store.read<Listing[]>(StorageKeys.publishedDemoListings, []);
-    const bySchool = new Set(mine.map((w) => w.schoolId));
-    const listings = [...published, ...demoListings].filter((l) => bySchool.has(l.schoolId));
+    const listings = await this.matchFeed(mine);
     const matches: WishlistMatch[] = [];
     for (const w of mine) {
       for (const l of listings) {
@@ -530,6 +555,31 @@ export class MockWishlistRepository implements WishlistRepository {
       }
     }
     return matches.sort((a, b) => b.score - a.score);
+  }
+
+  async matchDetailsForMe(): Promise<WishlistMatchDetail[]> {
+    const mine = (await this.mine()).filter((w) => w.status === "active");
+    if (mine.length === 0) return [];
+    const listings = await this.matchFeed(mine);
+    // Listing status can be overridden locally (e.g. reserved via an accepted offer);
+    // a match to a now-unavailable listing is still shown, flagged not-available.
+    const overrides = await this.store.read<Record<string, ListingStatus>>(StorageKeys.demoListingStatus, {});
+    const details: WishlistMatchDetail[] = [];
+    for (const w of mine) {
+      for (const l of listings) {
+        if (scoreWishlistMatch(l, w) < WISHLIST_MATCH_THRESHOLD) continue;
+        const status = overrides[l.id] ?? l.status;
+        details.push({
+          wishlistItemId: w.id,
+          wishlistTitle: w.title,
+          listing: { id: l.id, title: l.title, ownerId: l.ownerId, postType: l.postType, status, image: l.images[0] ?? null },
+          available: status === "active",
+          score: scoreWishlistMatch(l, w),
+          notified: false,
+        });
+      }
+    }
+    return details.sort((a, b) => b.score - a.score);
   }
 }
 
