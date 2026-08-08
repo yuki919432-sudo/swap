@@ -14,7 +14,9 @@ interface AuthContextValue {
   client: SupabaseClient | null;
   session: Session | null;
   ready: boolean;
+  signUpWithPassword: (email: string, password: string) => Promise<{ error: string | null }>;
   signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>;
+  sendPasswordReset: (email: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -50,9 +52,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       client,
       session,
       ready,
+      signUpWithPassword: async (email, password) => {
+        if (!client) return { error: "backend_not_configured" };
+        const { error } = await client.auth.signUp({ email: email.trim(), password });
+        return { error: error?.message ?? null };
+      },
       signInWithPassword: async (email, password) => {
         if (!client) return { error: "backend_not_configured" };
         const { error } = await client.auth.signInWithPassword({ email: email.trim(), password });
+        return { error: error?.message ?? null };
+      },
+      sendPasswordReset: async (email) => {
+        if (!client) return { error: "backend_not_configured" };
+        const { error } = await client.auth.resetPasswordForEmail(email.trim());
         return { error: error?.message ?? null };
       },
       signOut: async () => {
