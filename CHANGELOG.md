@@ -5,6 +5,25 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Trust & Safety — moderator queue & content actions (2026-08-08)
+
+Step 3b: the operational side of moderation, on a new tested migration.
+
+- **Migration `0032_moderation.sql`** — role-gated `SECURITY DEFINER` RPCs:
+  `resolve_report` (triage), `moderator_set_listing_status` (hide / remove /
+  restore), `moderator_suspend_member`. Authorization is checked in the DB
+  (`app.has_school_role`) — a moderator can act **only within their own school**.
+  Every action is logged to `moderation_actions` **and** the append-only audit log.
+- **pgTAP `36_moderation.sql`** (8): a non-moderator can't resolve; the school
+  moderator can triage; remove → `removed`, restore → `active`; a **cross-school**
+  moderator is blocked; suspend sets the membership `suspended`. Function-privilege
+  allowlist updated. Suite **319 / 23 files**.
+- **Mobile**: `ModerationRepository` (Supabase + Mock) + a **role-gated moderation
+  queue** (`/moderation`, linked from Settings when you're a moderator) — list open
+  reports, then resolve / dismiss / remove-listing / suspend-user. Review is anchored
+  to a specific report; there is **no blanket access to private messages**.
+- Tests: moderation mock (role gate, queue, resolve, remove-override). Mobile **160**.
+
 ### Trust & Safety — user reporting, blocking & support (2026-08-08)
 
 Step 3a toward the pilot: the user-facing UGC safety surface App Review requires,

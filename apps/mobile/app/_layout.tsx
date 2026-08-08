@@ -28,6 +28,7 @@ export default function RootLayout() {
                     <Stack.Screen name="my-listings" />
                     <Stack.Screen name="wishlist" />
                     <Stack.Screen name="settings" />
+                    <Stack.Screen name="moderation" />
                   </Stack>
                 </PilotGate>
               </SessionProvider>

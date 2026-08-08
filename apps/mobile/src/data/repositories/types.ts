@@ -7,7 +7,7 @@
  * touching a single screen.
  */
 import type { ItemCondition, ListingPostType, ListingStatus, MarketStatus, MembershipStatus, WishlistStatus, WishlistUrgency, WishlistVisibility } from "@swap/types";
-import type { OfferKind, ReportReason, ReportTargetType } from "@swap/types";
+import type { OfferKind, ReportReason, ReportStatus, ReportTargetType } from "@swap/types";
 import type {
   CommunityItem,
   Conversation,
@@ -246,6 +246,33 @@ export interface ReportRepository {
   unblock(userId: string): Promise<void>;
 }
 
+/** A report as seen in the moderator queue (moderators of the school only). */
+export interface ModerationReportView {
+  id: string;
+  targetType: ReportTargetType;
+  targetId: string;
+  reason: ReportReason;
+  explanation: string | null;
+  status: ReportStatus;
+  createdAt: string;
+  reporterName: string;
+}
+
+export type ContentAction = "hide_content" | "remove_content" | "restore_content";
+
+export interface ModerationRepository {
+  /** True when the caller holds a moderator/admin/owner role in the school. */
+  isModerator(schoolId: string): Promise<boolean>;
+  /** Open + in-review reports for the school (server-authorized; moderators only). */
+  openReports(schoolId: string): Promise<ModerationReportView[]>;
+  /** Triage a report (reviewing / resolved / dismissed / escalated). */
+  resolveReport(reportId: string, status: ReportStatus, resolution?: string | null): Promise<void>;
+  /** Hide / remove / restore a listing (logged to the moderation trail). */
+  setListingStatus(listingId: string, action: ContentAction, reportId?: string | null, reason?: string | null): Promise<void>;
+  /** Suspend a member of the school (logged to the moderation trail). */
+  suspendMember(userId: string, schoolId: string, reason?: string | null): Promise<void>;
+}
+
 /* ---------------------------------------------------------------- membership */
 
 /** The caller's school membership, resolved from the real backend. */
@@ -419,6 +446,7 @@ export interface Repositories {
   session: SessionRepository;
   membership: MembershipRepository;
   reports: ReportRepository;
+  moderation: ModerationRepository;
   marketplace: MarketplaceRepository;
   community: CommunityRepository;
   messaging: MessagingRepository;
