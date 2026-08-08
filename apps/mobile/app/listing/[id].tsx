@@ -12,6 +12,7 @@ import {
   Divider,
   ComingSoonSheet,
   ShelfRail,
+  ReportSheet,
 } from "../../src/components";
 import { useTheme } from "../../src/theme";
 import { useRepositories } from "../../src/data/repositories";
@@ -36,6 +37,7 @@ export default function ListingDetailScreen() {
   const [saved, setSaved] = useState(false);
   const [similar, setSimilar] = useState<Listing[]>([]);
   const [sheet, setSheet] = useState<null | { title: string; message: string; emoji: string }>(null);
+  const [reporting, setReporting] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -172,12 +174,7 @@ export default function ListingDetailScreen() {
         <Divider />
 
         <View style={{ flexDirection: "row", gap: theme.spacing.md }}>
-          <IconButton
-            icon="flag-outline"
-            accessibilityLabel="Report listing"
-            tone="danger"
-            onPress={() => setSheet({ emoji: "🚩", title: "Reporting is coming soon", message: "Reporting routes to human review in a later milestone. Thanks for helping keep campus safe." })}
-          />
+          <IconButton icon="flag-outline" accessibilityLabel="Report listing" tone="danger" onPress={() => setReporting(true)} />
           <View style={{ flex: 1 }}>
             {isOwn ? (
               <Button label="This is your listing" variant="secondary" disabled onPress={() => {}} />
@@ -197,6 +194,7 @@ export default function ListingDetailScreen() {
         title={sheet?.title ?? ""}
         message={sheet?.message ?? ""}
       />
+      <ReportSheet visible={reporting} onClose={() => setReporting(false)} targetType="listing" targetId={listing.id} targetLabel={listing.title} />
     </Screen>
   );
 }

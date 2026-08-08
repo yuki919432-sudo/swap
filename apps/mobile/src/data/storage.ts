@@ -92,4 +92,6 @@ export const StorageKeys = {
   ageAttested13Plus: "swap.ageAttested13Plus",
   /** Demo-mode simulated school membership (mirrors the real enrollment funnel). */
   demoMembership: "swap.demo.membership",
+  /** Demo-mode submitted reports (local mirror of the reports table). */
+  demoReports: "swap.demo.reports",
 } as const;

@@ -7,7 +7,7 @@
  * touching a single screen.
  */
 import type { ItemCondition, ListingPostType, ListingStatus, MarketStatus, MembershipStatus, WishlistStatus, WishlistUrgency, WishlistVisibility } from "@swap/types";
-import type { OfferKind } from "@swap/types";
+import type { OfferKind, ReportReason, ReportTargetType } from "@swap/types";
 import type {
   CommunityItem,
   Conversation,
@@ -220,6 +220,32 @@ export interface WishlistRepository {
   matchDetailsForMe(): Promise<WishlistMatchDetail[]>;
 }
 
+/* ----------------------------------------------------------- trust & safety */
+
+/** A user-submitted report against a piece of content or another user. */
+export interface NewReport {
+  targetType: ReportTargetType;
+  targetId: string;
+  reason: ReportReason;
+  explanation?: string | null;
+  evidenceUrl?: string | null;
+}
+
+export interface BlockedUser {
+  userId: string;
+  displayName: string;
+  avatarEmoji: string;
+}
+
+export interface ReportRepository {
+  /** File a report (reporter + school are resolved server-side under RLS). */
+  submitReport(input: NewReport): Promise<void>;
+  /** The users the caller has blocked (for a Settings "Blocked" list). */
+  listBlockedUsers(): Promise<BlockedUser[]>;
+  /** Remove a block the caller created. */
+  unblock(userId: string): Promise<void>;
+}
+
 /* ---------------------------------------------------------------- membership */
 
 /** The caller's school membership, resolved from the real backend. */
@@ -392,6 +418,7 @@ export interface OfferRepository {
 export interface Repositories {
   session: SessionRepository;
   membership: MembershipRepository;
+  reports: ReportRepository;
   marketplace: MarketplaceRepository;
   community: CommunityRepository;
   messaging: MessagingRepository;

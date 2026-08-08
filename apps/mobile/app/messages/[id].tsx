@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { View, TextInput, ScrollView, KeyboardAvoidingView, Platform, Pressable } from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
-import { Screen, AppText, Avatar, IconButton, Badge, ModerationNotice, Sheet, Button } from "../../src/components";
+import { Screen, AppText, Avatar, IconButton, Badge, ModerationNotice, Sheet, Button, ReportSheet } from "../../src/components";
 import { useTheme } from "../../src/theme";
 import { useRepositories } from "../../src/data/repositories";
 import { useSession } from "../../src/session/SessionProvider";
@@ -26,6 +26,7 @@ export default function ThreadScreen() {
   const [notice, setNotice] = useState<ModerationResult | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
   const [menu, setMenu] = useState(false);
+  const [reporting, setReporting] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
   const load = useCallback(async () => {
@@ -282,7 +283,27 @@ export default function ThreadScreen() {
         <AppText variant="micro" color="textFaint">
           Blocking stops new messages between you. Existing history stays visible to you.
         </AppText>
+        {detail ? (
+          <Button
+            label="Report conversation"
+            variant="danger"
+            icon="flag-outline"
+            onPress={() => {
+              setMenu(false);
+              setReporting(true);
+            }}
+          />
+        ) : null}
       </Sheet>
+      {detail ? (
+        <ReportSheet
+          visible={reporting}
+          onClose={() => setReporting(false)}
+          targetType="conversation"
+          targetId={detail.conversation.id}
+          targetLabel={detail.conversation.counterpart.displayName}
+        />
+      ) : null}
     </Screen>
   );
 }

@@ -66,6 +66,9 @@ import type {
   Membership,
   MembershipRepository,
   MessagingRepository,
+  NewReport,
+  BlockedUser,
+  ReportRepository,
   NewListing,
   NewMarket,
   NewWishlistItem,
@@ -952,6 +955,30 @@ export class MockMembershipRepository implements MembershipRepository {
   }
 }
 
+/* ----------------------------------------------------------- trust & safety */
+
+export class MockReportRepository implements ReportRepository {
+  constructor(private readonly store: JsonStore) {}
+
+  async submitReport(input: NewReport): Promise<void> {
+    const existing = await this.store.read<NewReport[]>(StorageKeys.demoReports, []);
+    await this.store.write(StorageKeys.demoReports, [{ ...input }, ...existing]);
+  }
+
+  async listBlockedUsers(): Promise<BlockedUser[]> {
+    const ids = await this.store.read<string[]>(StorageKeys.demoBlocks, []);
+    return ids.map((id) => {
+      const p = demoProfileById(id);
+      return { userId: id, displayName: p?.displayName ?? "Student", avatarEmoji: p?.avatarEmoji ?? "🙂" };
+    });
+  }
+
+  async unblock(userId: string): Promise<void> {
+    const ids = await this.store.read<string[]>(StorageKeys.demoBlocks, []);
+    await this.store.write(StorageKeys.demoBlocks, ids.filter((id) => id !== userId));
+  }
+}
+
 /** Build the full set of mock repositories over a key/value store. */
 export function createMockRepositories(kv: KeyValueStore): Repositories {
   const store = new JsonStore(kv);
@@ -959,6 +986,7 @@ export function createMockRepositories(kv: KeyValueStore): Repositories {
   return {
     session: new MockSessionRepository(store),
     membership: new MockMembershipRepository(store),
+    reports: new MockReportRepository(store),
     marketplace: new MockMarketplaceRepository(store),
     community: new MockCommunityRepository(),
     messaging: new MockMessagingRepository(store),

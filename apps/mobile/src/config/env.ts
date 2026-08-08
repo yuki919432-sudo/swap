@@ -11,6 +11,10 @@ export const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? ""
  *  student has no invitation code. Empty = manual fallback shows a support path. */
 export const PILOT_SCHOOL_ID = process.env.EXPO_PUBLIC_PILOT_SCHOOL_ID ?? "";
 
+/** Support / contact URL (https:// or mailto:). Shown in Settings; required for the
+ *  App Store support path. Empty = a generic "contact your school" note is shown. */
+export const SUPPORT_URL = process.env.EXPO_PUBLIC_SUPPORT_URL ?? "";
+
 /** Minimal, dependency-free base64url decode (works in RN and Node/test runtimes). */
 function decodeBase64Url(segment: string): string {
   let b64 = segment.replace(/-/g, "+").replace(/_/g, "/");
