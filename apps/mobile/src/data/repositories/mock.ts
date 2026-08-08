@@ -22,7 +22,7 @@ import type {
   WishlistMatch,
   WishlistMatchDetail,
 } from "../../domain/models";
-import type { ListingPostType, ListingStatus, MarketStatus, WishlistStatus } from "@swap/types";
+import type { ListingPostType, ListingStatus, MarketStatus, ReportStatus, WishlistStatus } from "@swap/types";
 import { LISTING_POST_TYPE } from "@swap/types";
 import {
   type DemoMarket,
@@ -69,6 +69,9 @@ import type {
   NewReport,
   BlockedUser,
   ReportRepository,
+  ContentAction,
+  ModerationReportView,
+  ModerationRepository,
   NewListing,
   NewMarket,
   NewWishlistItem,
@@ -957,12 +960,32 @@ export class MockMembershipRepository implements MembershipRepository {
 
 /* ----------------------------------------------------------- trust & safety */
 
+/** A demo-stored report (mirrors the reports table rows the moderator queue reads). */
+interface StoredReport {
+  id: string;
+  targetType: NewReport["targetType"];
+  targetId: string;
+  reason: NewReport["reason"];
+  explanation: string | null;
+  status: ReportStatus;
+  createdAt: string;
+}
+
 export class MockReportRepository implements ReportRepository {
   constructor(private readonly store: JsonStore) {}
 
   async submitReport(input: NewReport): Promise<void> {
-    const existing = await this.store.read<NewReport[]>(StorageKeys.demoReports, []);
-    await this.store.write(StorageKeys.demoReports, [{ ...input }, ...existing]);
+    const existing = await this.store.read<StoredReport[]>(StorageKeys.demoReports, []);
+    const row: StoredReport = {
+      id: newId("report"),
+      targetType: input.targetType,
+      targetId: input.targetId,
+      reason: input.reason,
+      explanation: input.explanation ?? null,
+      status: "open",
+      createdAt: new Date().toISOString(),
+    };
+    await this.store.write(StorageKeys.demoReports, [row, ...existing]);
   }
 
   async listBlockedUsers(): Promise<BlockedUser[]> {
@@ -979,6 +1002,54 @@ export class MockReportRepository implements ReportRepository {
   }
 }
 
+export class MockModerationRepository implements ModerationRepository {
+  constructor(private readonly store: JsonStore) {}
+
+  private async currentProfile(): Promise<string | null> {
+    return this.store.read<string | null>(StorageKeys.selectedProfile, null);
+  }
+
+  async isModerator(): Promise<boolean> {
+    const id = await this.currentProfile();
+    const p = id ? demoProfileById(id) : null;
+    return p ? p.staffRole !== null : false;
+  }
+
+  async openReports(): Promise<ModerationReportView[]> {
+    const rows = await this.store.read<StoredReport[]>(StorageKeys.demoReports, []);
+    return rows
+      .filter((r) => r.status === "open" || r.status === "reviewing")
+      .map((r) => ({
+        id: r.id,
+        targetType: r.targetType,
+        targetId: r.targetId,
+        reason: r.reason,
+        explanation: r.explanation,
+        status: r.status,
+        createdAt: r.createdAt,
+        reporterName: "A student",
+      }));
+  }
+
+  async resolveReport(reportId: string, status: ReportStatus): Promise<void> {
+    const rows = await this.store.read<StoredReport[]>(StorageKeys.demoReports, []);
+    await this.store.write(
+      StorageKeys.demoReports,
+      rows.map((r) => (r.id === reportId ? { ...r, status } : r)),
+    );
+  }
+
+  async setListingStatus(listingId: string, action: ContentAction): Promise<void> {
+    const overrides = await this.store.read<Record<string, string>>(StorageKeys.demoListingStatus, {});
+    overrides[listingId] = action === "restore_content" ? "active" : "removed";
+    await this.store.write(StorageKeys.demoListingStatus, overrides);
+  }
+
+  async suspendMember(): Promise<void> {
+    // Demo: suspension has no synthetic membership store to mutate; no-op.
+  }
+}
+
 /** Build the full set of mock repositories over a key/value store. */
 export function createMockRepositories(kv: KeyValueStore): Repositories {
   const store = new JsonStore(kv);
@@ -987,6 +1058,7 @@ export function createMockRepositories(kv: KeyValueStore): Repositories {
     session: new MockSessionRepository(store),
     membership: new MockMembershipRepository(store),
     reports: new MockReportRepository(store),
+    moderation: new MockModerationRepository(store),
     marketplace: new MockMarketplaceRepository(store),
     community: new MockCommunityRepository(),
     messaging: new MockMessagingRepository(store),
