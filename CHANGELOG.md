@@ -5,6 +5,31 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Authentication, age gate & membership UX (2026-08-08)
+
+Step 2 toward the Florida boarding-high-school pilot: a real onboarding funnel over
+the existing (already-approved) auth/membership backend. Release-blocker work; no
+new product features.
+
+- **Onboarding funnel** (`src/features/onboarding.ts`, pure + tested): 13+ age gate →
+  Supabase email/password auth → invitation-code enrollment → membership-status
+  screens. Only a **verified** member of an **active** school reaches the app.
+- **13+ age gate** (`src/config/ageGate.ts`): privacy-minimal — confirms 13-or-older,
+  blocks under-13 **before any account is created**, and stores only a local boolean
+  (no date of birth, no new server data, no parent-consent flow — deferred for review).
+- **Auth**: email/password **sign up + sign in**, session restoration, sign-out,
+  password-reset request (functional once SMTP is configured), clear errors/retry.
+- **MembershipRepository** (Supabase + Mock): `myMembership` / `redeemInvitation` /
+  `requestManual` over the server-authoritative `redeem_invitation` /
+  `request_membership` RPCs; the client can only read its **own** membership row (RLS).
+- **Membership states**: pending / rejected / suspended / inactive-school screens,
+  each with retry + sign-out. Manual-approval fallback via an optional
+  `EXPO_PUBLIC_PILOT_SCHOOL_ID` (else a support path). Invitation-only by default.
+- **PilotGate** (`src/onboarding/PilotGate.tsx`): gates pilot builds behind the funnel
+  as the single client enforcement point; demo builds are unchanged. Production
+  email-OTP architecture remains available for later activation (not required here).
+- Tests: onboarding resolver (full funnel), age gate, membership mock. Mobile **155**.
+
 ### Pilot build & environment safety (2026-07-31)
 
 First step of the path to a Florida boarding-high-school pilot: make builds

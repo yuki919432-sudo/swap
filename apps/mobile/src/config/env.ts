@@ -7,6 +7,10 @@
 export const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? "";
 export const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
+/** Optional: the pilot school's id, enabling a manual-approval request when the
+ *  student has no invitation code. Empty = manual fallback shows a support path. */
+export const PILOT_SCHOOL_ID = process.env.EXPO_PUBLIC_PILOT_SCHOOL_ID ?? "";
+
 /** Minimal, dependency-free base64url decode (works in RN and Node/test runtimes). */
 function decodeBase64Url(segment: string): string {
   let b64 = segment.replace(/-/g, "+").replace(/_/g, "/");

@@ -88,4 +88,8 @@ export const StorageKeys = {
   browsedCategories: "swap.browsedCategories",
   /** Prepared in-app activity events (wishlist match / unavailable / fulfilled / demand response). */
   activityEvents: "swap.activityEvents",
+  /** Local, privacy-minimal 13+ age attestation (no date of birth stored). */
+  ageAttested13Plus: "swap.ageAttested13Plus",
+  /** Demo-mode simulated school membership (mirrors the real enrollment funnel). */
+  demoMembership: "swap.demo.membership",
 } as const;

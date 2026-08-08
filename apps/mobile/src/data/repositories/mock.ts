@@ -63,6 +63,8 @@ import type {
   MarketplaceQuery,
   MarketplaceRepository,
   MarketRepository,
+  Membership,
+  MembershipRepository,
   MessagingRepository,
   NewListing,
   NewMarket,
@@ -912,12 +914,51 @@ export class MockCampusMarketRepository implements CampusMarketRepository {
 
 /* ------------------------------------------------------------- DI factory */
 
+/* ---------------------------------------------------------------- membership */
+
+/**
+ * Deterministic demo membership. Invitation codes map to outcomes so the onboarding
+ * funnel can be exercised without a real backend:
+ *   SWAP-VERIFIED → verified · SWAP-PENDING → pending · SWAP-INACTIVE → verified but
+ *   the school is inactive · anything else → invalid.
+ */
+export class MockMembershipRepository implements MembershipRepository {
+  constructor(private readonly store: JsonStore) {}
+
+  private stored(): Promise<Membership | null> {
+    return this.store.read<Membership | null>(StorageKeys.demoMembership, null);
+  }
+
+  async myMembership(): Promise<Membership | null> {
+    return this.stored();
+  }
+
+  async redeemInvitation(code: string): Promise<Membership> {
+    const norm = code.trim().toUpperCase();
+    const base = { schoolId: "school-uni", schoolName: "Demo University" };
+    let membership: Membership;
+    if (norm === "SWAP-VERIFIED") membership = { ...base, status: "verified", schoolActive: true };
+    else if (norm === "SWAP-PENDING") membership = { ...base, status: "pending", schoolActive: true };
+    else if (norm === "SWAP-INACTIVE") membership = { ...base, status: "verified", schoolActive: false };
+    else throw new Error("invitation_invalid");
+    await this.store.write(StorageKeys.demoMembership, membership);
+    return membership;
+  }
+
+  async requestManual(input: { schoolId: string; gradYear?: number | null; explanation?: string | null }): Promise<Membership> {
+    const membership: Membership = { schoolId: input.schoolId, schoolName: "Demo University", status: "pending", schoolActive: true };
+    await this.store.write(StorageKeys.demoMembership, membership);
+    return membership;
+  }
+}
+
 /** Build the full set of mock repositories over a key/value store. */
 export function createMockRepositories(kv: KeyValueStore): Repositories {
   const store = new JsonStore(kv);
   const stalls = new MockStallRepository(store);
   return {
     session: new MockSessionRepository(store),
+    membership: new MockMembershipRepository(store),
     marketplace: new MockMarketplaceRepository(store),
     community: new MockCommunityRepository(),
     messaging: new MockMessagingRepository(store),

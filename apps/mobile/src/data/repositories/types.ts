@@ -6,7 +6,7 @@
  * build can wire Supabase-backed implementations of the SAME interfaces without
  * touching a single screen.
  */
-import type { ItemCondition, ListingPostType, ListingStatus, MarketStatus, WishlistStatus, WishlistUrgency, WishlistVisibility } from "@swap/types";
+import type { ItemCondition, ListingPostType, ListingStatus, MarketStatus, MembershipStatus, WishlistStatus, WishlistUrgency, WishlistVisibility } from "@swap/types";
 import type { OfferKind } from "@swap/types";
 import type {
   CommunityItem,
@@ -220,6 +220,26 @@ export interface WishlistRepository {
   matchDetailsForMe(): Promise<WishlistMatchDetail[]>;
 }
 
+/* ---------------------------------------------------------------- membership */
+
+/** The caller's school membership, resolved from the real backend. */
+export interface Membership {
+  schoolId: string;
+  schoolName: string;
+  status: MembershipStatus;
+  /** False when the school itself is not active (paused/closed). */
+  schoolActive: boolean;
+}
+
+export interface MembershipRepository {
+  /** The caller's membership (any status), or null if not enrolled anywhere. */
+  myMembership(): Promise<Membership | null>;
+  /** Enroll via an invitation code; returns the resulting membership. */
+  redeemInvitation(code: string): Promise<Membership>;
+  /** Manual-approval fallback: request membership in a school (goes to review). */
+  requestManual(input: { schoolId: string; gradYear?: number | null; explanation?: string | null }): Promise<Membership>;
+}
+
 /* ------------------------------------------------------------ student stalls */
 
 export interface StallRepository {
@@ -371,6 +391,7 @@ export interface OfferRepository {
 
 export interface Repositories {
   session: SessionRepository;
+  membership: MembershipRepository;
   marketplace: MarketplaceRepository;
   community: CommunityRepository;
   messaging: MessagingRepository;

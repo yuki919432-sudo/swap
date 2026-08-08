@@ -12,6 +12,7 @@ import type { Repositories } from "../types";
 import { SupabaseMarketplaceRepository, type ImageReader } from "./marketplace";
 import { SupabaseSavedListingsRepository } from "./saved";
 import { SupabaseSessionRepository } from "./session";
+import { SupabaseMembershipRepository } from "./membership";
 import { SupabaseCommunityRepository } from "./community";
 import { SupabaseWishlistRepository } from "./wishlist";
 import { SupabaseStallRepository } from "./stall";
@@ -29,6 +30,7 @@ export function createSupabaseRepositories(
   const stalls = new SupabaseStallRepository(client);
   return {
     session: new SupabaseSessionRepository(client),
+    membership: new SupabaseMembershipRepository(client),
     marketplace: new SupabaseMarketplaceRepository(client, opts),
     community: new SupabaseCommunityRepository(),
     messaging: new SupabaseMessagingRepository(client),
@@ -46,6 +48,7 @@ export {
   SupabaseMarketplaceRepository,
   SupabaseSavedListingsRepository,
   SupabaseSessionRepository,
+  SupabaseMembershipRepository,
   SupabaseWishlistRepository,
   SupabaseStallRepository,
   SupabaseMarketRepository,
