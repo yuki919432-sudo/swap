@@ -15,3 +15,4 @@ export { ModerationNotice } from "./ModerationNotice";
 export { ShelfRail } from "./ShelfRail";
 export { WishlistCard } from "./WishlistCard";
 export { MissingBackendScreen } from "./MissingBackendScreen";
+export { ReportSheet } from "./ReportSheet";

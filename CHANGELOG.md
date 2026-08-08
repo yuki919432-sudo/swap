@@ -5,6 +5,24 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Trust & Safety — user reporting, blocking & support (2026-08-08)
+
+Step 3a toward the pilot: the user-facing UGC safety surface App Review requires,
+built over the existing `0012_trust_safety` backend (no migration; direct RLS).
+
+- **Report anything**: a reusable `ReportSheet` (reason picker + optional note) files
+  a report against a listing/image, a user, or a message/conversation. Wired into the
+  listing detail and the conversation ••• menu. Notes run through the local moderation
+  simulator before they're attached.
+- **`ReportRepository`** (Supabase + Mock): `submitReport` + `listBlockedUsers` +
+  `unblock`. Reports/blocks are written under RLS — reporter + school are
+  server-resolved; the client can't forge another user's report or block.
+- **Settings → Safety & Support**: manage **blocked students** (list + unblock) and a
+  **Contact support** path (`EXPO_PUBLIC_SUPPORT_URL`), plus guidance on reporting.
+- Tests: report mock (submit + block list + unblock). Mobile **157**.
+- Moderator review queue + content actions (hide/remove/suspend) land in Step 3b
+  (adds a tested migration). Private-message review will be tied to an explicit report.
+
 ### Authentication, age gate & membership UX (2026-08-08)
 
 Step 2 toward the Florida boarding-high-school pilot: a real onboarding funnel over

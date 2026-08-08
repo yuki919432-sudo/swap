@@ -1,13 +1,15 @@
-import { useEffect, useState } from "react";
-import { View } from "react-native";
-import { useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import { View, Linking } from "react-native";
+import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Screen, AppText, Card, Avatar, Badge, Button, IconButton, Divider, DemoBanner } from "../src/components";
 import { useTheme } from "../src/theme";
 import { useRepositories } from "../src/data/repositories";
 import { useSession } from "../src/session/SessionProvider";
 import type { DemoProfile } from "../src/domain/models";
+import type { BlockedUser } from "../src/data/repositories/types";
 import { membershipStatusLabel, membershipTone } from "../src/lib/status";
+import { SUPPORT_URL } from "../src/config/env";
 
 export default function SettingsScreen() {
   const theme = useTheme();
@@ -15,6 +17,26 @@ export default function SettingsScreen() {
   const repos = useRepositories();
   const { session, selectProfile, clear } = useSession();
   const [profiles, setProfiles] = useState<DemoProfile[]>([]);
+  const [blocked, setBlocked] = useState<BlockedUser[]>([]);
+
+  const loadBlocked = useCallback(async () => {
+    try {
+      setBlocked(await repos.reports.listBlockedUsers());
+    } catch {
+      setBlocked([]);
+    }
+  }, [repos]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadBlocked();
+    }, [loadBlocked]),
+  );
+
+  const openSupport = () => {
+    const url = SUPPORT_URL.length > 0 ? SUPPORT_URL : "mailto:";
+    Linking.openURL(url).catch(() => {});
+  };
 
   useEffect(() => {
     repos.session.listSchools().then(async (schools) => {
@@ -69,6 +91,46 @@ export default function SettingsScreen() {
             </Card>
           );
         })}
+      </View>
+
+      <Divider />
+
+      <AppText variant="caption" color="textMuted">
+        SAFETY & SUPPORT
+      </AppText>
+      <View style={{ gap: theme.spacing.sm, marginTop: theme.spacing.sm }}>
+        <AppText variant="micro" color="textFaint">
+          BLOCKED STUDENTS
+        </AppText>
+        {blocked.length === 0 ? (
+          <AppText variant="caption" color="textFaint">
+            You haven't blocked anyone. Blocking stops new messages and offers between you.
+          </AppText>
+        ) : (
+          blocked.map((b) => (
+            <Card key={b.userId} elevation="none">
+              <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.md }}>
+                <Avatar emoji={b.avatarEmoji} size={36} />
+                <AppText variant="callout" style={{ flex: 1 }}>
+                  {b.displayName}
+                </AppText>
+                <Button
+                  label="Unblock"
+                  variant="secondary"
+                  fullWidth={false}
+                  onPress={async () => {
+                    await repos.reports.unblock(b.userId);
+                    loadBlocked();
+                  }}
+                />
+              </View>
+            </Card>
+          ))
+        )}
+        <Button label="Contact support" variant="secondary" icon="help-buoy-outline" onPress={openSupport} style={{ marginTop: theme.spacing.sm }} />
+        <AppText variant="micro" color="textFaint">
+          Report a listing, message, or person from the ••• menu on that item. Reports go to your school's moderators. If someone is in danger, contact local authorities.
+        </AppText>
       </View>
 
       <Divider />
