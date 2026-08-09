@@ -27,6 +27,7 @@
     "db:test:concurrency": "bash scripts/db-test-concurrency.sh",
     "check:enum-parity": "node --experimental-strip-types scripts/check-enum-parity.mjs",
     "check:unicode": "node scripts/check-unicode.mjs",
+    "check:mobile-env": "node --experimental-strip-types scripts/check-mobile-env.mjs",
     "db:gen-types": "bash scripts/gen-db-types.sh",
     "storage:integration": "node supabase/tests/integration/storage.integration.mjs",
     "mobile:start": "pnpm --filter @swap/mobile start",

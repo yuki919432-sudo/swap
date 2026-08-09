@@ -5,6 +5,28 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Production environment readiness (2026-08-09)
+
+Step 5 toward the pilot: make a production go-live scripted and safe, without ever
+handling the owner's secrets.
+
+- **Build-time env preflight** — `evaluateMobileEnv` (pure, `src/config/preflight.ts`)
+  + `scripts/check-mobile-env.mjs` / `pnpm check:mobile-env`. A **pilot** build fails
+  loudly (non-zero exit) when the Supabase URL/anon key or support URL is missing or
+  malformed, or when a **service-role key** is present in the client env. The
+  canonical service-role guard now lives in `preflight.ts`; `config/env.ts` re-exports
+  it (single source of truth). 8 new unit tests.
+- **Production bootstrap** — idempotent, secret-free, parameterized SQL in
+  `supabase/production/`: `01_pilot_school.sql` (school + `invite_code`/`manual`
+  settings + safe handoff locations, prints the `school_id`), `02_promote_owner.sql`
+  (promote a signed-up account to `school_owner` by email, clean error if the account
+  doesn't exist yet), `03_mint_invitation.sql` (shared enrollment code — only its hash
+  is stored). All verified against a clean schema DB, including idempotent re-runs.
+- **Runbook** — `docs/PRODUCTION_READINESS.md`: apply migrations (`supabase db push`,
+  never the test setup stubs), stand up the pilot school, set EAS env, preflight,
+  smoke-test the real path (enroll → post → cross-school isolation → offer/handoff →
+  report → delete), plus a human-only checklist. `deployment.md` points to it.
+
 ### Account deletion, data export & profile controls (2026-08-09)
 
 Step 4 toward the pilot: the self-service account controls App Review requires
