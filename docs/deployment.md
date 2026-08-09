@@ -1,7 +1,9 @@
 # Deployment
 
-> Phase 1A introduces no paid resources and performs no deployment. This is the
-> intended shape for later phases. **Do not** create paid resources without
+> For the pilot go-live runbook (apply migrations → stand up the pilot school →
+> configure EAS env → smoke test), see
+> [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md). This page is the reference
+> shape for environments and secrets. **Do not** create paid resources without
 > explicit approval.
 
 ## Environments

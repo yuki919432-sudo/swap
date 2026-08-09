@@ -15,33 +15,11 @@ export const PILOT_SCHOOL_ID = process.env.EXPO_PUBLIC_PILOT_SCHOOL_ID ?? "";
  *  App Store support path. Empty = a generic "contact your school" note is shown. */
 export const SUPPORT_URL = process.env.EXPO_PUBLIC_SUPPORT_URL ?? "";
 
-/** Minimal, dependency-free base64url decode (works in RN and Node/test runtimes). */
-function decodeBase64Url(segment: string): string {
-  let b64 = segment.replace(/-/g, "+").replace(/_/g, "/");
-  const pad = b64.length % 4;
-  if (pad) b64 += "=".repeat(4 - pad);
-  if (typeof atob === "function") return atob(b64);
-  // Node fallback (vitest).
-  const g = globalThis as { Buffer?: { from(s: string, enc: string): { toString(enc: string): string } } };
-  if (g.Buffer) return g.Buffer.from(b64, "base64").toString("binary");
-  throw new Error("no base64 decoder");
-}
-
-/**
- * True when a key is a Supabase **service-role** JWT (which must never reach the
- * client — it bypasses RLS). Supabase keys are JWTs whose payload carries a `role`
- * claim of "anon" or "service_role"; a service-role key is a hard misconfiguration.
- */
-export function looksLikeServiceRoleKey(key: string): boolean {
-  try {
-    const parts = key.split(".");
-    if (parts.length !== 3 || !parts[1]) return false;
-    const payload = JSON.parse(decodeBase64Url(parts[1])) as { role?: unknown };
-    return payload.role === "service_role";
-  } catch {
-    return false;
-  }
-}
+// The service-role guard lives in ./preflight (the single canonical implementation,
+// import-free so the preflight CLI can run it under node --experimental-strip-types).
+// Re-exported here so existing `import { looksLikeServiceRoleKey } from "./env"` holds.
+export { looksLikeServiceRoleKey } from "./preflight";
+import { looksLikeServiceRoleKey } from "./preflight";
 
 export interface SupabaseEnvStatus {
   /** True only when a usable, non-service-role backend is configured. */
