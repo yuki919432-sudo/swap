@@ -1,7 +1,9 @@
-# Community Guidelines (PLACEHOLDER)
+# Community Guidelines (DRAFT — review with school stakeholders)
 
-> **Placeholder.** Schools may extend these with their own guidelines
-> (`school_settings.community_guidelines`). Review with school stakeholders.
+> **Working draft.** Schools may extend these with their own guidelines
+> (`school_settings.community_guidelines`). Review with school stakeholders before
+> launch. These sit alongside the [Terms of Use / EULA](TERMS_OF_USE.md), which set a
+> **zero-tolerance** standard for objectionable content and abusive users.
 
 SWAP! exists to reduce waste, help students reuse items, support student-led
 activities, and build stronger, safer school communities.
@@ -30,4 +32,6 @@ activities, and build stronger, safer school communities.
 - Administrators review reports and can remove content or suspend members.
 
 Violations may result in content removal, warnings, suspension, or removal from
-the school community.
+the school community. Reports of objectionable content or abusive behavior are
+reviewed by human moderators, who aim to act within **24 hours** — removing content
+and, where warranted, suspending or removing the user.

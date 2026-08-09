@@ -27,7 +27,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "SWAP! (demo) uses your photo library only to attach images to a local demo listing. Images never leave your device."
+          "photosPermission": "SWAP! uses your photo library so you can add photos to the items you post. Photos you attach to a listing are shared with verified students at your school."
         }
       ]
     ],
