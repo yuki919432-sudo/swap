@@ -5,6 +5,27 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Full real-backend E2E QA — Trust & Safety + Account (2026-08-09)
+
+Step 6 toward the pilot: prove the Step 3–4 surfaces work over the REAL Supabase
+stack (PostgREST + Auth + RLS), not just in pgTAP and mock unit tests.
+
+- **New integration test** `trustSafetyAccount.integration.test.ts` — boots against a
+  disposable Supabase stack (CI's `integration` job) and drives the actual
+  `SupabaseReportRepository`, `SupabaseModerationRepository`, and
+  `SupabaseAccountRepository` as real users across two schools under RLS:
+  - Reporting: a report's `reporter_id` + `school_id` are server-resolved
+    (unforgeable); the block list add/list/unblock is caller-scoped.
+  - Moderation: only a school's moderators see its reports (a reporter sees their
+    own; an unrelated member and a **cross-school** moderator see nothing); a
+    moderator removes a listing + resolves the report + suspends a member; a
+    cross-school moderator is denied acting on this school's content.
+  - Account: profile edit hits only the caller's row; data export is self-scoped
+    (a member's export contains their own report/listing, never another member's);
+    deletion request sets `deletion_requested` (soft, reversible).
+- Skips cleanly when `SUPABASE_URL` is absent, so the plain unit suite is unaffected
+  (28 files / 173 tests still green); the real run is the CI `integration` job.
+
 ### Production environment readiness (2026-08-09)
 
 Step 5 toward the pilot: make a production go-live scripted and safe, without ever
