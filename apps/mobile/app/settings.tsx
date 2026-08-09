@@ -18,6 +18,7 @@ export default function SettingsScreen() {
   const { session, selectProfile, clear } = useSession();
   const [profiles, setProfiles] = useState<DemoProfile[]>([]);
   const [blocked, setBlocked] = useState<BlockedUser[]>([]);
+  const [isMod, setIsMod] = useState(false);
 
   const loadBlocked = useCallback(async () => {
     try {
@@ -25,7 +26,12 @@ export default function SettingsScreen() {
     } catch {
       setBlocked([]);
     }
-  }, [repos]);
+    try {
+      setIsMod(session ? await repos.moderation.isModerator(session.school.id) : false);
+    } catch {
+      setIsMod(false);
+    }
+  }, [repos, session]);
 
   useFocusEffect(
     useCallback(() => {
@@ -127,6 +133,9 @@ export default function SettingsScreen() {
             </Card>
           ))
         )}
+        {isMod ? (
+          <Button label="Moderation queue" variant="secondary" icon="shield-checkmark-outline" onPress={() => router.push("/moderation")} style={{ marginTop: theme.spacing.sm }} />
+        ) : null}
         <Button label="Contact support" variant="secondary" icon="help-buoy-outline" onPress={openSupport} style={{ marginTop: theme.spacing.sm }} />
         <AppText variant="micro" color="textFaint">
           Report a listing, message, or person from the ••• menu on that item. Reports go to your school's moderators. If someone is in danger, contact local authorities.
