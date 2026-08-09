@@ -1,0 +1,13 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SWAP! app icon (placeholder)">
+  <!-- Placeholder app icon: white swap arrows on the brand green. Full-bleed (no
+       rounded corners — the store applies the mask). Replace with final art. -->
+  <rect width="1024" height="1024" fill="#1FB673"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="70" stroke-linecap="round" stroke-linejoin="round">
+    <!-- top arrow: left -> right -->
+    <path d="M300 402 h380"/>
+    <polyline points="596 318 690 402 596 486"/>
+    <!-- bottom arrow: right -> left -->
+    <path d="M724 622 h-380"/>
+    <polyline points="428 706 334 622 428 538"/>
+  </g>
+</svg>

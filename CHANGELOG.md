@@ -5,6 +5,35 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### App Store submission readiness (2026-08-09)
+
+Step 7 toward the pilot: the submission pack + accurate store-facing config. Code-side
+items are complete; remaining items are owner/human (accounts, hosting, legal sign-off,
+device screenshots).
+
+- **Accuracy fix (release blocker):** the `app.json` photo-library permission string
+  described a "demo … images never leave your device" flow, which is **false** for a
+  pilot build (attached photos upload to school-scoped storage). Rewritten to describe
+  the real behavior — inaccurate purpose strings are an App Review rejection.
+- **Submission pack** under `docs/appstore/`:
+  - `PRIVACY_NUTRITION_LABELS.md` — full PII inventory mapped to the App Store Connect
+    App Privacy questionnaire + Play Data safety (no ads, no tracking, no payments, no
+    location; email stored hashed/private; 13+, no DOB).
+  - `APP_REVIEW_NOTES.md` — reviewer sign-in (test account + invitation code, since the
+    app is invitation-only) and a guideline-by-guideline walkthrough.
+  - `APP_STORE_METADATA.md` — name/subtitle/description/keywords/URLs + age-rating
+    questionnaire answers + export-compliance note.
+  - `APP_REVIEW_GUIDELINE_AUDIT.md` — where each guideline is satisfied in the codebase
+    (1.2 UGC, 5.1.1(v) deletion, 5.1.4 minors, 1.4 safety, 3.1.1 payments) + the
+    human-only pre-submit checklist.
+  - `ASSETS.md` + `apps/mobile/assets/icon.svg` — placeholder app icon (brand swap mark)
+    and the icon/splash/screenshot spec.
+- **Legal drafts expanded** (`docs/legal/`), still marked draft/counsel-review:
+  Privacy Policy (13+, subprocessors, minimization, rights/deletion), Terms of Use now
+  doubling as the **EULA with a zero-tolerance objectionable-content clause** and a
+  24-hour report-action commitment (App Review 1.2), and Community Guidelines aligned
+  to the same enforcement standard.
+
 ### Full real-backend E2E QA — Trust & Safety + Account (2026-08-09)
 
 Step 6 toward the pilot: prove the Step 3–4 surfaces work over the REAL Supabase
