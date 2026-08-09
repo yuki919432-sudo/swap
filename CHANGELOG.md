@@ -5,6 +5,32 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Account deletion, data export & profile controls (2026-08-09)
+
+Step 4 toward the pilot: the self-service account controls App Review requires
+(Guideline 5.1.1(v)), surfacing the retention model that already exists in
+`0020_retention_lifecycle.sql` — not a new policy.
+
+- **Migration `0033_account_deletion.sql`** — two thin, self-scoped `public` RPCs
+  the mobile app can call (PostgREST only exposes `public`):
+  `request_account_deletion()` (wraps the existing soft, reversible `app` function)
+  and `export_my_account()` (`SECURITY DEFINER`, returns a JSON document of **only
+  the caller's own** data — every sub-query filtered by `auth.uid()`).
+- **pgTAP `37_account.sql`** (7): an unauthenticated caller can't request deletion;
+  a member's request sets `account_status = 'deletion_requested'` and stamps
+  `deletion_requested_at`; a member's export contains **only their own** rows, never
+  another member's. Function-privilege allowlist updated. Suite **326 / 24 files**.
+- **Mobile**: `AccountRepository` (Supabase + Mock) — `updateProfile`,
+  `requestDeletion`, `exportMyData`. New **Account & privacy** screen (`/account`,
+  linked from Settings): edit profile, **Download my data** (share the JSON export),
+  and **Delete my account** (confirm → request deletion → sign out). Deletion is
+  reversible until finalized.
+- **Docs**: `ACCOUNT_DELETION_AND_RETENTION.md` describes exactly what is scrubbed
+  vs. retained (personal profile scrubbed; transaction/report/moderation/audit
+  history preserved and de-identified), for accurate App Review disclosure.
+- Tests: account mock (profile edit, deletion flag, self-scoped export) + Supabase
+  account fake-client (RPC + patch shaping).
+
 ### Trust & Safety — moderator queue & content actions (2026-08-08)
 
 Step 3b: the operational side of moderation, on a new tested migration.

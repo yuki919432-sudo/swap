@@ -26,7 +26,8 @@ insert into allow values
   ('public','decline_exchange_offer'), ('public','cancel_exchange_offer'),
   ('public','counter_exchange_offer'), ('public','set_handoff_plan'),
   ('public','confirm_completion'), ('public','mark_handed_over'), ('public','mark_returned'),
-  ('public','resolve_report'), ('public','moderator_set_listing_status'), ('public','moderator_suspend_member');
+  ('public','resolve_report'), ('public','moderator_set_listing_status'), ('public','moderator_suspend_member'),
+  ('public','request_account_deletion'), ('public','export_my_account');
 
 -- ---- app.write_audit is not executable by authenticated -------------------
 select ok(

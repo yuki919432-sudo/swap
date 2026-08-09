@@ -273,6 +273,29 @@ export interface ModerationRepository {
   suspendMember(userId: string, schoolId: string, reason?: string | null): Promise<void>;
 }
 
+/* ------------------------------------------------------------------- account */
+
+/** Fields the caller may edit on their own profile. */
+export interface ProfileEdit {
+  displayName?: string;
+  gradYear?: number | null;
+}
+
+/**
+ * Self-service account controls. Deletion is soft/reversible (the backend marks
+ * the account `deletion_requested`; maintenance later anonymizes while preserving
+ * transaction/report/moderation/audit history). Export returns ONLY the caller's
+ * own data.
+ */
+export interface AccountRepository {
+  /** Update the caller's own profile (display name, graduation year). */
+  updateProfile(input: ProfileEdit): Promise<void>;
+  /** Request deletion of the caller's own account (soft, reversible until purged). */
+  requestDeletion(): Promise<void>;
+  /** A JSON document of the caller's own data (data portability / "download my data"). */
+  exportMyData(): Promise<unknown>;
+}
+
 /* ---------------------------------------------------------------- membership */
 
 /** The caller's school membership, resolved from the real backend. */
@@ -445,6 +468,7 @@ export interface OfferRepository {
 export interface Repositories {
   session: SessionRepository;
   membership: MembershipRepository;
+  account: AccountRepository;
   reports: ReportRepository;
   moderation: ModerationRepository;
   marketplace: MarketplaceRepository;

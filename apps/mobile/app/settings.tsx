@@ -145,6 +145,18 @@ export default function SettingsScreen() {
       <Divider />
 
       <AppText variant="caption" color="textMuted">
+        ACCOUNT
+      </AppText>
+      <View style={{ gap: theme.spacing.sm, marginTop: theme.spacing.sm }}>
+        <Button label="Account & privacy" variant="secondary" icon="person-circle-outline" onPress={() => router.push("/account")} />
+        <AppText variant="micro" color="textFaint">
+          Edit your profile, download a copy of your data, or delete your account.
+        </AppText>
+      </View>
+
+      <Divider />
+
+      <AppText variant="caption" color="textMuted">
         ABOUT
       </AppText>
       <Card elevation="none" style={{ marginTop: theme.spacing.sm }}>

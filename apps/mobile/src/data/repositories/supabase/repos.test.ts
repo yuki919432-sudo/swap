@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { SupabaseMarketplaceRepository } from "./marketplace";
 import { SupabaseSavedListingsRepository } from "./saved";
+import { SupabaseAccountRepository } from "./account";
 
 /**
  * A tiny fake of the Supabase query builder — enough to exercise the repositories'
@@ -150,6 +151,45 @@ describe("SupabaseMarketplaceRepository (fake client)", () => {
     );
     expect(created.id).toBe("l1");
     expect(uploads).toEqual(["s1/l1/0.jpg"]);
+  });
+});
+
+describe("SupabaseAccountRepository (fake client)", () => {
+  function accountClient(rpcCalls: { name: string; args: unknown }[], updates: unknown[], uid: string | null = "u1"): SupabaseClient {
+    const client = {
+      auth: { getUser: async () => ({ data: { user: uid ? { id: uid } : null } }) },
+      from: () => ({
+        update(p: unknown) {
+          updates.push(p);
+          return { eq: async () => ({ data: null, error: null }) };
+        },
+      }),
+      rpc: async (name: string, args: unknown) => {
+        rpcCalls.push({ name, args });
+        return { data: name === "export_my_account" ? { schema_version: 1, profile: { display_name: "Me" } } : null, error: null };
+      },
+    };
+    return client as unknown as SupabaseClient;
+  }
+
+  it("updateProfile patches only provided fields on the caller's row", async () => {
+    const updates: unknown[] = [];
+    const repo = new SupabaseAccountRepository(accountClient([], updates));
+    await repo.updateProfile({ displayName: "  Me  ", gradYear: 2028 });
+    expect(updates).toEqual([{ display_name: "Me", grad_year: 2028 }]);
+  });
+
+  it("requestDeletion calls the self-scoped RPC", async () => {
+    const rpcCalls: { name: string; args: unknown }[] = [];
+    const repo = new SupabaseAccountRepository(accountClient(rpcCalls, []));
+    await repo.requestDeletion();
+    expect(rpcCalls[0]?.name).toBe("request_account_deletion");
+  });
+
+  it("exportMyData returns the RPC document", async () => {
+    const repo = new SupabaseAccountRepository(accountClient([], []));
+    const data = (await repo.exportMyData()) as { schema_version: number };
+    expect(data.schema_version).toBe(1);
   });
 });
 
