@@ -236,6 +236,15 @@ interface, 🟩). No early lock.
 I proceed autonomously (build → verify → PR → self-merge on green), pausing only for
 §4 human-only items. Each numbered block is one or more checkpoints.
 
+> **Status (2026-08-09): the engineering track is complete.** Release Steps 1–7 are
+> built, tested, and merged to `main`:
+> 1 app-mode/EAS build config · 2 auth + 13+ age gate + membership UX ·
+> 3 reporting + human moderation · 4 account deletion + export + profile ·
+> 5 production-env readiness (preflight + bootstrap scripts) · 6 full real-backend
+> E2E QA · 7 App Store submission pack.
+> The only work left before Submit is **human-only** — see
+> [SUBMISSION_CHECKLIST.md](SUBMISSION_CHECKLIST.md).
+
 1. **Pilot / release build configuration** — EAS build profiles (dev/preview/prod),
    env/secret plumbing (values from you), app config (bundle id, version), CI → build
    wiring. *(Light shared-copy module introduced here so later screens use it.)*
