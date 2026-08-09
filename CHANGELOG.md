@@ -5,6 +5,20 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Submission handoff — engineering track complete (2026-08-09)
+
+Step 8 (final): consolidate the pilot into a single go-live handoff.
+
+- **`docs/SUBMISSION_CHECKLIST.md`** — one ordered checklist of the **human-only**
+  actions left before App Review (Apple account + App Store Connect record;
+  production Supabase + the `supabase/production` bootstrap; host + set the
+  Privacy Policy/ToS/EULA URLs; EAS env incl. `EXPO_PUBLIC_SUPPORT_URL` +
+  `EXPO_PUBLIC_PILOT_SCHOOL_ID` + `pnpm check:mobile-env`; reviewer test account +
+  invitation code; real bundle id + final icon + screenshots; device smoke test +
+  `/security-review`; `eas build`/`eas submit`), each linked to the doc that covers it.
+- **`PRODUCT_COMPLETENESS_PLAN.md`** — status banner marking release Steps 1–7 built,
+  tested, and merged; only human-only submission work remains.
+
 ### App Store submission readiness (2026-08-09)
 
 Step 7 toward the pilot: the submission pack + accurate store-facing config. Code-side
