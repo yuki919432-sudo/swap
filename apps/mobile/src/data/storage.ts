@@ -94,4 +94,8 @@ export const StorageKeys = {
   demoMembership: "swap.demo.membership",
   /** Demo-mode submitted reports (local mirror of the reports table). */
   demoReports: "swap.demo.reports",
+  /** Demo-mode local profile edits (display name / graduation year). */
+  demoProfile: "swap.demo.profile",
+  /** Demo-mode account-deletion request flag (soft, reversible). */
+  demoDeletionRequested: "swap.demo.deletionRequested",
 } as const;

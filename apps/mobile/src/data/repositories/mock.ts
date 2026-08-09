@@ -54,6 +54,8 @@ import { applyMarketplaceQuery } from "./marketplaceQuery";
 import { buildDiscoveryShelves, buildDemandClusters } from "./campusDiscovery";
 import { MockOfferRepository } from "./mockOffers";
 import type {
+  AccountRepository,
+  ProfileEdit,
   CampusMarketRepository,
   CommunityRepository,
   DemandCluster,
@@ -958,6 +960,39 @@ export class MockMembershipRepository implements MembershipRepository {
   }
 }
 
+/**
+ * Demo account controls. Profile edits and the deletion request are stored locally
+ * so Settings can exercise the same flows the real backend implements; "download my
+ * data" returns a synthetic self-scoped document.
+ */
+export class MockAccountRepository implements AccountRepository {
+  constructor(private readonly store: JsonStore) {}
+
+  async updateProfile(input: ProfileEdit): Promise<void> {
+    const current = await this.store.read<ProfileEdit>(StorageKeys.demoProfile, {});
+    const next: ProfileEdit = { ...current };
+    if (input.displayName !== undefined) next.displayName = input.displayName.trim();
+    if (input.gradYear !== undefined) next.gradYear = input.gradYear;
+    await this.store.write(StorageKeys.demoProfile, next);
+  }
+
+  async requestDeletion(): Promise<void> {
+    await this.store.write(StorageKeys.demoDeletionRequested, true);
+  }
+
+  async exportMyData(): Promise<unknown> {
+    const profile = await this.store.read<ProfileEdit>(StorageKeys.demoProfile, {});
+    const membership = await this.store.read<Membership | null>(StorageKeys.demoMembership, null);
+    return {
+      exported_at: new Date().toISOString(),
+      schema_version: 1,
+      note: "Demo export — synthetic data only.",
+      profile,
+      memberships: membership ? [membership] : [],
+    };
+  }
+}
+
 /* ----------------------------------------------------------- trust & safety */
 
 /** A demo-stored report (mirrors the reports table rows the moderator queue reads). */
@@ -1057,6 +1092,7 @@ export function createMockRepositories(kv: KeyValueStore): Repositories {
   return {
     session: new MockSessionRepository(store),
     membership: new MockMembershipRepository(store),
+    account: new MockAccountRepository(store),
     reports: new MockReportRepository(store),
     moderation: new MockModerationRepository(store),
     marketplace: new MockMarketplaceRepository(store),

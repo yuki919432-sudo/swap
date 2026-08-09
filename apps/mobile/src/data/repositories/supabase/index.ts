@@ -13,6 +13,7 @@ import { SupabaseMarketplaceRepository, type ImageReader } from "./marketplace";
 import { SupabaseSavedListingsRepository } from "./saved";
 import { SupabaseSessionRepository } from "./session";
 import { SupabaseMembershipRepository } from "./membership";
+import { SupabaseAccountRepository } from "./account";
 import { SupabaseReportRepository } from "./reports";
 import { SupabaseModerationRepository } from "./moderation";
 import { SupabaseCommunityRepository } from "./community";
@@ -33,6 +34,7 @@ export function createSupabaseRepositories(
   return {
     session: new SupabaseSessionRepository(client),
     membership: new SupabaseMembershipRepository(client),
+    account: new SupabaseAccountRepository(client),
     reports: new SupabaseReportRepository(client),
     moderation: new SupabaseModerationRepository(client),
     marketplace: new SupabaseMarketplaceRepository(client, opts),
@@ -53,6 +55,7 @@ export {
   SupabaseSavedListingsRepository,
   SupabaseSessionRepository,
   SupabaseMembershipRepository,
+  SupabaseAccountRepository,
   SupabaseReportRepository,
   SupabaseModerationRepository,
   SupabaseWishlistRepository,
