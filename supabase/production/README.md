@@ -16,6 +16,7 @@ Order and required variables (psql `-v name=value`):
 | 1 | `01_pilot_school.sql` | `school_name`, `school_slug` | Create the school + default settings (`invite_code` + `manual`) + safe handoff locations. Prints the new `school_id`. |
 | 2 | `02_promote_owner.sql` | `school_id`, `owner_email` | Make an already-signed-up account the school **owner** (and verify their membership). |
 | 3 | `03_mint_invitation.sql` | `school_id`, `code`, `max_uses` | Create a shared invitation code students redeem to enroll. |
+| — | `review_seed.mjs` | env: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `REVIEW_PASSWORD` | **Optional, App Review only.** Stands up an isolated **synthetic** review school (sample listings + a pre-verified reviewer/moderator account + a seller). Keeps fake data out of the real pilot school. Run: `node supabase/production/review_seed.mjs`. |
 
 `school_slug` must be lowercase, `^[a-z0-9][a-z0-9-]{1,62}$` (e.g. `img-academy`).
 
