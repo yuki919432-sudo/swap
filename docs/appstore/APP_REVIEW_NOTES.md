@@ -13,29 +13,44 @@ items with classmates and hand off in person at safe on-campus locations. **Ther
 no payments and no advertising.** Access requires a school invitation code; all data
 is isolated per school. Minimum age is 13.
 
-## How to sign in (required — the app has no open sign-up)
+## Reviewer independence (no real people or roster needed)
 
-Provide these in App Review Information:
+Before review, the operator runs **`supabase/production/review_seed.mjs`** once. It
+stands up an isolated, fully **synthetic review school** with sample listings and two
+synthetic accounts. As a result the reviewer needs **no** real student, **no** real
+school employee, **no** roster, and **no** manual intervention during review — the
+provided login is pre-verified and is also a moderator, so one account demonstrates
+the entire app end to end.
 
-- **Test email:** `<reviewer test account email>`
-- **Test password:** `<password>`
-- **Invitation code:** `<code from supabase/production/03_mint_invitation.sql>`
+## How to sign in (the app has no open sign-up — this is expected)
 
-Reviewer steps:
+Provide these in App Review Information (from the seed script's output):
 
-1. Launch the app → confirm the **13+ age gate**.
-2. Sign in with the test email/password above (already verified for the review
-   school).
-3. If prompted to enroll, enter the **invitation code** above → you land in the
-   school as a verified student.
-4. Browse the marketplace, open a listing, and try **Report** (••• menu) and
-   **Block** — the UGC safety controls.
-5. Open **Settings → Account & privacy** to see **Edit profile**, **Download my
-   data**, and **Delete my account** (account deletion is initiated in-app).
+- **Test email:** `appreview@swap-review.test` (pre-verified; also a moderator)
+- **Test password:** `<REVIEW_PASSWORD used when seeding>`
+- **Invitation code (optional, to demo enrollment):** `SWAP-REVIEW-2026`
 
-> Provide a **second** test account (or note that the reviewer may create a listing)
-> if the reviewer needs to see a two-student exchange. A moderator-enabled account can
-> be provided on request to demonstrate the moderation queue.
+## Feature walkthrough (everything is reachable from this one account)
+
+1. **Age gate** — launch → confirm you are 13+.
+2. **Sign in** with the test email/password above → you land verified in the review
+   school (no enrollment step needed). *To also see enrollment,* sign out and sign up
+   a fresh account, then enter the invitation code above.
+3. **Campus Market / discovery** — the home surface shows finite shelves of the seeded
+   listings (no infinite feed).
+4. **Listings** — open any sample listing; **create your own** listing (attach a photo
+   to see image upload).
+5. **Wishlist** — add a "looking for" item; see it on your wishlist.
+6. **Messaging** — open a seeded listing → message the seller (`seller@swap-review.test`).
+7. **Offers / handoff** — on a seeded listing, **make an offer**; the offer appears in
+   the thread. (Full bilateral accept→handoff→complete needs the second account; the
+   offer/handoff UI is fully visible from the reviewer account.)
+8. **Reporting** — ••• → **Report** on a listing/message with a reason.
+9. **Moderation** — because this account is a moderator, open **Settings → Moderation
+   queue** to see the report you filed and **remove/resolve** it.
+10. **Blocking** — block the seller from a thread; manage/unblock in **Settings**.
+11. **Account deletion** — **Settings → Account & privacy → Delete my account**
+    (also **Edit profile** and **Download my data** there).
 
 ## Guideline-specific pointers for the reviewer
 

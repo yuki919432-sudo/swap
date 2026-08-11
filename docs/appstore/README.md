@@ -8,7 +8,8 @@ tracked in the audit's checklist.
 |-----|---------------|
 | [APP_REVIEW_GUIDELINE_AUDIT.md](APP_REVIEW_GUIDELINE_AUDIT.md) | Guideline-by-guideline compliance map (1.2 UGC, 5.1.1(v), 5.1.4, 1.4, 3.1.1…) + the human-only checklist |
 | [PRIVACY_NUTRITION_LABELS.md](PRIVACY_NUTRITION_LABELS.md) | PII inventory → App Store Connect / Play data-safety answers |
-| [APP_REVIEW_NOTES.md](APP_REVIEW_NOTES.md) | Reviewer sign-in (test account + invitation code) + what to test |
+| [APP_REVIEW_NOTES.md](APP_REVIEW_NOTES.md) | Reviewer sign-in (synthetic account + invitation code) + full feature walkthrough |
+| [DEVICE_QA_CHECKLIST.md](DEVICE_QA_CHECKLIST.md) | Manual real-device / TestFlight QA checklist (P0/P1) for the full journey |
 | [APP_STORE_METADATA.md](APP_STORE_METADATA.md) | Name, subtitle, description, keywords, URLs, age-rating answers |
 | [ASSETS.md](ASSETS.md) | Icon (placeholder `icon.svg`), splash, screenshot spec |
 

@@ -5,6 +5,24 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Submission hardening — review access & device QA (2026-08-09)
+
+Final-hardening tooling so App Review and device QA need no real people or roster.
+
+- **`supabase/production/review_seed.mjs`** — operator-run, service-role script that
+  stands up an isolated **synthetic review school**: sample listings, a synthetic
+  seller, and a pre-verified reviewer account that is **also a moderator** so one login
+  demonstrates browse → message → offer → report → moderation → account deletion. The
+  invitation-code hash is computed to match `app.hash_code` exactly (verified), so
+  seeded codes redeem. Keeps fake data out of the real pilot school.
+- **`docs/appstore/APP_REVIEW_NOTES.md`** — rewritten with a reviewer-independence
+  statement (no real student/employee/roster/manual step) and an exact 11-step feature
+  walkthrough tied to the seeded account.
+- **`docs/appstore/DEVICE_QA_CHECKLIST.md`** — P0/P1 manual real-device / TestFlight
+  checklist covering auth, navigation, image upload, keyboard, loading/error/refresh,
+  messaging, offers/handoff, reporting/blocking, account deletion, small-screen layout,
+  and relaunch/session restoration. (Human-run; not auto-verified.)
+
 ### Submission handoff — engineering track complete (2026-08-09)
 
 Step 8 (final): consolidate the pilot into a single go-live handoff.
