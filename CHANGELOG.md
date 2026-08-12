@@ -5,6 +5,30 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Upgrade mobile to Expo SDK 54 (2026-08-11)
+
+Bump the mobile app from Expo SDK 52 → 54 so it runs in the current Expo Go (SDK 54,
+the only version installable on iOS) and to keep the build on a current Apple SDK for
+submission.
+
+- **Dependencies** pinned to the SDK 54 native-module map: `expo ~54`, `react 19.1.0`,
+  `react-native 0.81.5`, `react-dom 19.1.0`, `expo-router ~6`, `expo-constants ~18`,
+  `expo-image ~3`, `expo-image-picker ~17`, `expo-linking ~8`, `expo-status-bar ~3`,
+  `@react-native-async-storage/async-storage 2.2.0`, `react-native-gesture-handler
+  ~2.28`, `react-native-safe-area-context ~5.6`, `react-native-screens ~4.16`,
+  `@expo/vector-icons ^15`, `@types/react ~19.1`. Added web-preview deps
+  (`react-native-web ~0.21`, `@expo/metro-runtime ~6.1`, `@babel/runtime`).
+- **`.npmrc` `node-linker=hoisted`** — the Expo/Metro toolchain (SDK 54) resolves
+  `metro-runtime` etc. via a flat `node_modules`, which pnpm's default isolated linker
+  doesn't provide. Hoisted linking is the Expo-recommended pnpm-monorepo setup.
+- **`metro.config.js` resolver shim** — the shared workspace packages (`@swap/types`,
+  `@swap/validation`) are consumed as TS source with TS-ESM `.js` import specifiers;
+  Metro doesn't map `.js`→`.ts`, so a failing relative `.js` import is retried without
+  the extension. (tsc + vitest already handled this.)
+- **Verified**: full offline iOS Metro bundle builds (1300+ modules, Hermes bytecode);
+  all typechecks, lint, unit tests (mobile 173, server 79) and the pgTAP suite (326)
+  green. No product/feature/schema changes — SDK/runtime upgrade only.
+
 ### Submission hardening — review access & device QA (2026-08-09)
 
 Final-hardening tooling so App Review and device QA need no real people or roster.
