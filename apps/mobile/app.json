@@ -2,9 +2,10 @@
   "expo": {
     "name": "SWAP!",
     "slug": "swap-mobile",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "swap",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -13,10 +14,12 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "test.example.swap.demo"
+      "bundleIdentifier": "com.swapcampus.app",
+      "buildNumber": "1"
     },
     "android": {
-      "package": "test.example.swap.demo"
+      "package": "com.swapcampus.app",
+      "versionCode": 1
     },
     "web": {
       "bundler": "metro",

@@ -5,6 +5,17 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Submission config: bundle id, icon, version + public policy site (2026-08-12)
+
+Fastest-path prep to submit to the App Store.
+
+- app.json: real bundle identifier com.swapcampus.app (ios + android), version 1.0.0,
+  ios.buildNumber 1, android.versionCode 1, and a real 1024x1024 opaque-RGB app icon
+  (apps/mobile/assets/icon.png, rasterized from icon.svg; no alpha per App Store).
+- Public policy site in site/ (Privacy Policy, Terms/EULA, Community Guidelines,
+  Support) + a GitHub Pages deploy workflow (.github/workflows/pages.yml) so the app
+  has reachable policy/support URLs required by App Review.
+
 ### Upgrade mobile to Expo SDK 54 (2026-08-11)
 
 Bump the mobile app from Expo SDK 52 → 54 so it runs in the current Expo Go (SDK 54,
