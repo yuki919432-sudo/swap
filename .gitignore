@@ -46,3 +46,6 @@ Thumbs.db
 coverage/
 .tap/
 test-results/
+
+# Generated production secrets (provisioning script output) — NEVER commit
+.env.production.secrets
