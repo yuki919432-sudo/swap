@@ -5,6 +5,21 @@ All notable changes to SWAP! are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Retarget to existing App Store app: app.replit.swap, v1.0.4 (2026-08-23)
+
+Ship the new codebase as a major-redesign UPDATE to the existing App Store app
+("SWAP! by ShareCycle", bundle id app.replit.swap) — not a new listing.
+
+- app.json: ios.bundleIdentifier + android.package -> app.replit.swap; version -> 1.0.4;
+  removed the hardcoded ios.buildNumber/android.versionCode (now EAS-managed).
+- eas.json: cli.appVersionSource -> remote (EAS reads the latest build number from App
+  Store Connect and auto-increments, so it cannot collide with a build number already
+  used by 1.0.x); submit.production.ios.ascAppId placeholder to target the existing app.
+- docs/appstore/UPDATE_1_0_4.md: build/submit runbook + credentials + the App Review
+  note describing 1.0.4 as a major redesign, plus the user-data-continuity note.
+
+No product/schema/test changes. Bundle id is referenced only in app.json.
+
 ### Submission config: bundle id, icon, version + public policy site (2026-08-12)
 
 Fastest-path prep to submit to the App Store.
